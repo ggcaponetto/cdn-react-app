@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>External React App</title>
+</head>
+<body>
+    <h3>some website content not part of react</h3>
+    <div id="app"></div>
+    <script id="external-react-app"></script>
+    <script type="text/javascript">
+      // change path to match your file:
+      window.onload = function (){
+        console.log("external-react-app: busting the browser cache for bundle.js")
+        let resourcePath = 'bundle.js';
+        document.getElementById('external-react-app').src = resourcePath + '?v=' + Date.now();
+      }
+    </script>
+</body>
+</html>
