@@ -6,6 +6,9 @@
 </head>
 <body>
     <h3>some website content not part of react</h3>
+    <button onclick="onButtonClick(event);">
+    sent message to sep
+    </button>
     <div id="app"></div>
     <script id="external-react-app"></script>
     <script type="text/javascript">
@@ -13,7 +16,19 @@
       window.onload = function (){
         console.log("external-react-app: busting the browser cache for bundle.js")
         let resourcePath = 'bundle.js';
-        document.getElementById('external-react-app').src = resourcePath + '?v=' + Date.now();
+        let script = document.getElementById('external-react-app')
+        script.async = true
+        script.src = resourcePath + '?v=' + Date.now();
+        script.addEventListener('load', function() {
+          console.log("external-react-app: loaded");
+        });
+      }
+      function onSEPMessage(e){
+        console.log("external-react-app: got message", e);
+      }
+      function onButtonClick(event){
+        console.log("sending", event);
+        window.onHostMessage(event);
       }
     </script>
 </body>

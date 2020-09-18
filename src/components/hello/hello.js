@@ -13,7 +13,7 @@ function Hello (props) {
         color: 'hotpink'
       }}
     >
-      <h3>Hello wrld</h3>
+      <h3>Hello world</h3>
     </div>
   )
 }
