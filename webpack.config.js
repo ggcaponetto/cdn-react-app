@@ -1,7 +1,6 @@
 const webpack = require('webpack')
-const path = require("path")
-const { CleanWebpackPlugin } = require('clean-webpack-plugin');
-
+const path = require('path')
+const { CleanWebpackPlugin } = require('clean-webpack-plugin')
 
 module.exports = {
   mode: 'development',
@@ -55,10 +54,15 @@ module.exports = {
     filename: 'bundle.js'
   },
   plugins: [
-    new webpack.HotModuleReplacementPlugin()
+    new webpack.HotModuleReplacementPlugin(),
+    new webpack.DefinePlugin({
+      'process.env.ERA_ENV': JSON.stringify(process.env.ERA_ENV),
+      'process.env.AAAACAP': true
+    })
   ],
   devServer: {
     contentBase: './public',
     hot: true
   }
 }
+

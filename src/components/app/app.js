@@ -3,11 +3,15 @@ import ReactDOM from 'react-dom'
 
 import { Hello } from '../hello/hello.js'
 import { Marketsense } from '../marketsense/marketsense.js'
-
+import log from "loglevel";
+let loglevel = log.noConflict();
+const appProps = {
+  loglevel
+}
 let component = () => (
   <React.Fragment>
-    <Hello></Hello>
-    <Marketsense/>
+    <Hello {...appProps}></Hello>
+    <Marketsense {...appProps}/>
   </React.Fragment>
 );
 
