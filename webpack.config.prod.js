@@ -47,7 +47,12 @@ module.exports = (env, argv) => {
         }
       ]
     },
+    target: "web",
     mode: NODE_ENV,
+    optimization: {
+      minimize: NODE_ENV === "production",
+      nodeEnv: NODE_ENV
+    },
     resolve: {
       extensions: ['*', '.js', '.jsx']
     },
@@ -57,11 +62,15 @@ module.exports = (env, argv) => {
       filename: 'bundle.js'
     },
     plugins: [
-      new webpack.EnvironmentPlugin({
-        NODE_ENV: NODE_ENV, // use 'development' unless process.env.NODE_ENV is defined
-        DEBUG: false
+      new webpack.DefinePlugin({
+        'process.env.NODE_ENV' : JSON.stringify(NODE_ENV)
       })
-    ]
+    ],
+    devServer: {
+      contentBase: path.join(__dirname, 'public'),
+      port: 3000,
+      hot: NODE_ENV === "production"
+    }
   }
   console.log("webpack is using config", config);
   config.plugins.forEach((plugin) => {

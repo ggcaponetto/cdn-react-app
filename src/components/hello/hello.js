@@ -2,7 +2,7 @@ import React, { useEffect, useState, useContext, useReducer, useRef } from 'reac
 import styles from "./hello.module.css"
 /** @jsx jsx */
 import { jsx } from '@emotion/core'
-
+import moment from "moment"
 
 function Hello (props) {
   useEffect(() => {
@@ -17,7 +17,7 @@ function Hello (props) {
         color: 'hotpink'
       }}
     >
-      <h3>Hello world</h3>
+      <h3>Hello world!! {(new moment()).toISOString()}</h3>
     </div>
   )
 }

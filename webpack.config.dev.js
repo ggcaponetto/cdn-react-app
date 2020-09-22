@@ -50,8 +50,8 @@ module.exports = (env, argv) => {
     target: "web",
     mode: NODE_ENV,
     optimization: {
-      minimize: true,
-      nodeEnv: 'production'
+      minimize: NODE_ENV === "production",
+      nodeEnv: NODE_ENV
     },
     resolve: {
       extensions: ['*', '.js', '.jsx']
@@ -70,7 +70,7 @@ module.exports = (env, argv) => {
     devServer: {
       contentBase: path.join(__dirname, 'public'),
       port: 3000,
-      hot: true
+      hot: NODE_ENV === "production"
     }
   }
   console.log("webpack is using config", config);
