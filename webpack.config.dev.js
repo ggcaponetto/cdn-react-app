@@ -4,7 +4,7 @@ const path = require('path')
 const NODE_ENV = process.env.NODE_ENV || "development";
 
 module.exports = (env, argv) => {
-  console.log('applying webpack config: ', {env, argv, NODE_ENV});
+  console.log('applying webpack config: ', {env, argv});
   let config = {
     entry: './src/index.js',
     devtool: 'inline-source-map',
@@ -47,21 +47,31 @@ module.exports = (env, argv) => {
         }
       ]
     },
+    target: "web",
     mode: NODE_ENV,
+    optimization: {
+      minimize: true,
+      nodeEnv: 'production'
+    },
     resolve: {
       extensions: ['*', '.js', '.jsx']
     },
     output: {
-      path: path.resolve(__dirname, 'dist'),
+      path: path.resolve(__dirname, 'public'),
       publicPath: '/',
       filename: 'bundle.js'
     },
     plugins: [
-      new webpack.EnvironmentPlugin({
-        NODE_ENV: NODE_ENV, // use 'development' unless process.env.NODE_ENV is defined
-        DEBUG: false
+      new webpack.HotModuleReplacementPlugin(),
+      new webpack.DefinePlugin({
+        'process.env.NODE_ENV' : JSON.stringify(NODE_ENV)
       })
-    ]
+    ],
+    devServer: {
+      contentBase: path.join(__dirname, 'public'),
+      port: 3000,
+      hot: true
+    }
   }
   console.log("webpack is using config", config);
   config.plugins.forEach((plugin) => {
