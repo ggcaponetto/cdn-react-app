@@ -65,12 +65,7 @@ module.exports = (env, argv) => {
       new webpack.DefinePlugin({
         'process.env.NODE_ENV' : JSON.stringify(NODE_ENV)
       })
-    ],
-    devServer: {
-      contentBase: path.join(__dirname, 'public'),
-      port: 3000,
-      hot: NODE_ENV === "production"
-    }
+    ]
   }
   console.log("webpack is using config", config);
   config.plugins.forEach((plugin) => {

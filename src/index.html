@@ -27,9 +27,9 @@
       function onSEPMessage(e){
         console.log("external-react-app: got message", e);
       }
-      function onButtonClick(event){
-        console.log("sending", event);
-        window.onHostMessage(event);
+      function onButtonClick(e){
+        console.log("external-react-app: sending message", e);
+        window.onHostMessage(e);
       }
     </script>
     <!--COPY THIS SNIPPET HERE - END -->
