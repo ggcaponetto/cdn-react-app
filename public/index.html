@@ -16,10 +16,10 @@
       // change path to match your file:
       window.onload = function (){
         console.log("external-react-app: busting the browser cache for bundle.js")
-        let resourcePath = 'bundle.js';
+        let resourcePath = 'bundle.js?sepEventName=sep-event';
         let script = document.getElementById('external-react-app')
         script.async = true
-        script.src = resourcePath + '?v=' + Date.now();
+        script.src = resourcePath + '&v=' + Date.now();
         script.addEventListener('load', function() {
           console.log("external-react-app: loaded");
         });

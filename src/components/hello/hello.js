@@ -4,6 +4,10 @@ import styles from "./hello.module.css"
 import { jsx } from '@emotion/core'
 import moment from "moment"
 import log from 'loglevel'
+
+// this is bad, messes up the host css
+// DONT: import "./hello-global.css"
+
 log.setLevel("debug")
 
 const setupLogs = () => {
