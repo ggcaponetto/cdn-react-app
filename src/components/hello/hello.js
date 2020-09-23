@@ -19,12 +19,15 @@ const setupLogs = () => {
 
 function Hello (props) {
   const fnName = "Hello";
+  const [result, setResult] = useState(null);
   useEffect(() => {
     setupLogs();
-/*    log.debug(`${fnName} - useEffect`, { props, styles, process })
+    log.debug(`${fnName} - useEffect`, { props, styles, process })
     import("./hello-split.js").then(math => {
-      log.debug("dynamic import of hello-split.js has completed.", {result: math.add(16, 26)});
-    });*/
+      let result = math.add(16, 26);
+      log.debug("dynamic import of hello-split.js has completed.", {result});
+      setResult(result);
+    });
   }, [])
   return (
     <div
@@ -32,7 +35,7 @@ function Hello (props) {
         color: 'hotpink'
       }}
     >
-      <h3>Hello world!! {(new moment()).toISOString()}</h3>
+      <h3>Hello world!! {(new moment()).toISOString()} - (hello-split.js: {result})</h3>
     </div>
   )
 }
