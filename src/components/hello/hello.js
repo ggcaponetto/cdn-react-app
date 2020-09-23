@@ -21,10 +21,10 @@ function Hello (props) {
   const fnName = "Hello";
   useEffect(() => {
     setupLogs();
-    log.debug(`${fnName} - useEffect`, { props, styles, process })
+/*    log.debug(`${fnName} - useEffect`, { props, styles, process })
     import("./hello-split.js").then(math => {
       log.debug("dynamic import of hello-split.js has completed.", {result: math.add(16, 26)});
-    });
+    });*/
   }, [])
   return (
     <div
