@@ -5,33 +5,48 @@
     <title>External React App</title>
 </head>
 <body>
-    <h3>some website content not part of react</h3>
-    <button onclick="onButtonClick(event);">
-    sent message to sep
-    </button>
-    <!--COPY THIS SNIPPET HERE - START -->
-    <div id="app"></div>
-    <script id="external-react-app"></script>
-    <script type="text/javascript">
-      // change path to match your file:
-      window.onload = function (){
-        console.log("external-react-app: busting the browser cache for bundle.js")
-        let resourcePath = 'bundle.js?sepEventName=sep-event';
-        let script = document.getElementById('external-react-app')
-        script.async = true
-        script.src = resourcePath + '&v=' + Date.now();
-        script.addEventListener('load', function() {
-          console.log("external-react-app: loaded");
-        });
-      }
-      function onSEPMessage(e){
-        console.log("external-react-app: got message", e);
-      }
-      function onButtonClick(e){
-        console.log("external-react-app: sending message", e);
-        window.onHostMessage(e);
-      }
-    </script>
-    <!--COPY THIS SNIPPET HERE - END -->
+<h3>some website content not part of react</h3>
+<!--COPY THIS SNIPPET HERE - START -->
+<div id="sep-core"></div>
+<h3>some website content not part of react</h3>
+<div id="sep-map"></div>
+<h3>some website content not part of react</h3>
+<div id="sep-address"></div>
+<h3>some website content not part of react</h3>
+
+<script id="external-react-app"></script>
+<script type="text/javascript">
+  // change path to match your file:
+  window.onload = function () {
+    const sepEventName = 'sep-event'
+    let script = document.getElementById('external-react-app')
+    script.async = true
+    script.src = 'bundle.js?scriptId=sep-core&sepEventName=' + sepEventName + '&v=' + Date.now()
+    script.addEventListener('load', function () {
+      console.log('external-react-app: loaded')
+      window.dispatchEvent(new CustomEvent(sepEventName, {
+        detail: {
+          action: 'init-sep-map',
+          payload: {
+            mapContainerId: "sep-map"
+          }
+        }
+      }))
+      window.dispatchEvent(new CustomEvent(sepEventName, {
+        detail: {
+          action: 'init-sep-address',
+          payload: {
+            searchContainerId: "sep-address"
+          }
+        }
+      }))
+    })
+
+    /*window.addEventListener(sepEventName, (event) => {
+      console.log('external-react-app event:', event)
+    })*/
+  }
+</script>
+<!--COPY THIS SNIPPET HERE - END -->
 </body>
 </html>
