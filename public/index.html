@@ -19,32 +19,46 @@
   // change path to match your file:
   window.onload = function () {
     const sepEventName = 'sep-event'
+    window.addEventListener(sepEventName, (e) => {
+      console.log('host: got event', { action: e.detail.action })
+      if(e.detail.action === "loaded-marketsense"){
+        window.dispatchEvent(new CustomEvent(sepEventName, {
+          detail: {
+            action: 'init-sep-map',
+            payload: {
+              mapContainerId: 'sep-map'
+            }
+          }
+        }))
+      }
+      if(e.detail.action === "loaded-address"){
+        window.dispatchEvent(new CustomEvent(sepEventName, {
+          detail: {
+            action: 'init-sep-address',
+            payload: {
+              addressContainerId: 'sep-address'
+            }
+          }
+        }))
+      }
+    })
+    /*window.dispatchEvent(new CustomEvent(sepEventName, {
+      detail: {
+        action: 'init-sep-address',
+        payload: {
+          searchContainerId: "sep-address"
+        }
+      }
+    }))*/
+
     let script = document.getElementById('external-react-app')
     script.async = true
     script.src = 'bundle.js?scriptId=sep-core&sepEventName=' + sepEventName + '&v=' + Date.now()
     script.addEventListener('load', function () {
-      console.log('external-react-app: loaded')
-      window.dispatchEvent(new CustomEvent(sepEventName, {
-        detail: {
-          action: 'init-sep-map',
-          payload: {
-            mapContainerId: "sep-map"
-          }
-        }
-      }))
-      window.dispatchEvent(new CustomEvent(sepEventName, {
-        detail: {
-          action: 'init-sep-address',
-          payload: {
-            searchContainerId: "sep-address"
-          }
-        }
-      }))
+      // the react app has rendered once
+      console.log('external-react-app: script loaded')
     })
 
-    /*window.addEventListener(sepEventName, (event) => {
-      console.log('external-react-app event:', event)
-    })*/
   }
 </script>
 <!--COPY THIS SNIPPET HERE - END -->

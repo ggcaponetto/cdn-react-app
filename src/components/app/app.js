@@ -7,6 +7,7 @@ import { Marketsense } from '../marketsense/marketsense.js'
 import Button from '@material-ui/core/Button'
 
 import log from 'loglevel'
+import { win } from 'leaflet/src/core/Browser'
 
 log.setLevel('debug')
 
@@ -22,27 +23,28 @@ const getParsedUrl = () => {
     throw e;
   }
 }
+
 function App (props) {
   const fnName = 'App'
-  let [appProps, setAppProps] = useState(null)
+  let [appProps, setAppProps] = useState({})
 
   useEffect(() => {
     const url = new URL(script.src)
     const parsedUrl = getParsedUrl();
-    log.debug(`${fnName} - constructor`, { url, parsedUrl })
-    let newAppProps = {
-      sepEvents: {
-        dispatch: (eventName, eventDetail) => {
-          const myEvent = new CustomEvent(eventName, {
-            detail: eventDetail
-          })
-          window.dispatchEvent(myEvent)
-        },
-        name: parsedUrl.sepEventName
+    log.debug(`${fnName} - constructor`, { url, parsedUrl, appProps })
+    setAppProps((appProps) => {
+      return {
+        ...appProps,
+        parsedUrl
       }
-    }
-    newAppProps.sepEvents.dispatch(newAppProps.sepEvents.name, { message: 'loaded app.js' })
-    setAppProps(newAppProps)
+    })
+    const myEvent = new CustomEvent(parsedUrl.sepEventName, {
+      detail: {
+        action: "loaded-app",
+        payload: true
+      }
+    })
+    window.dispatchEvent(myEvent);
   }, [])
 
   const getComponent = () => {
@@ -71,7 +73,7 @@ if (module.hot) {
   module.hot.accept('../hello/hello', function () {
     log.trace('Accepting the updated hello.js module!')
     ReactDOM.render(
-      <App/>,
+      <App />,
       document.getElementById('app')
     )
   })

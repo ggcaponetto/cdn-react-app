@@ -23,26 +23,40 @@ const setupLogs = () => {
 function AddressSearch (props) {
   const fnName = 'AddressSearch'
   const [container, setContainer] = useState(null)
+
   useEffect(() => {
     log.debug(`${fnName} - useEffect - []`, { props })
     setupLogs()
-    const onSepEvent = (event) => {
-      log.debug(`${fnName} - onSepEvent`, event)
-      if (
-        event.detail
-        && event.detail.action === 'init-sep-address'
-        && event.detail.payload
-        && event.detail.payload.searchContainerId
-      ) {
-        log.debug(`${fnName} - onSepEvent - setting up the container`, event)
-        setContainer(document.getElementById(event.detail.payload.searchContainerId))
+  }, [])
+
+  useEffect(() => {
+    if(props.parsedUrl && props.parsedUrl.sepEventName){
+      const onSepEvent = (event) => {
+        log.debug(`${fnName} - onSepEvent`, event)
+        if (
+          event.detail
+          && event.detail.action === 'init-sep-address'
+          && event.detail.payload
+          && event.detail.payload.addressContainerId
+        ) {
+          log.debug(`${fnName} - onSepEvent - setting up the container`, event)
+          setContainer(document.getElementById(event.detail.payload.addressContainerId))
+        }
+      }
+
+      window.addEventListener(props.parsedUrl.sepEventName, onSepEvent)
+      const myEvent = new CustomEvent(props.parsedUrl.sepEventName, {
+        detail: {
+          action: "loaded-address",
+          payload: true
+        }
+      })
+      window.dispatchEvent(myEvent);
+      return () => {
+        window.removeEventListener(props.parsedUrl.sepEventName, onSepEvent)
       }
     }
-    window.addEventListener(props.sepEvents.name, onSepEvent)
-    return () => {
-      window.removeEventListener(props.sepEvents.name, onSepEvent)
-    }
-  }, [])
+  }, [props.parsedUrl])
 
   if (container) {
     return ReactDOM.createPortal((
@@ -86,28 +100,46 @@ function Marketsense (props) {
 
     map.on('click', onMapClick)
   }
-  useEffect(() => {
+
+  useEffect(()=> {
     log.debug(`${fnName} - useEffect - []`, { props })
     setupLogs()
-    const onSepEvent = (event) => {
-      log.debug(`${fnName} - onSepEvent`, event)
-      if (
-        event.detail
-        && event.detail.action === 'init-sep-map'
-        && event.detail.payload
-        && event.detail.payload.mapContainerId
-      ) {
-        log.debug(`${fnName} - onSepEvent - setting up the container`, event)
-        setContainer(document.getElementById(event.detail.payload.mapContainerId))
+  }, [])
+
+  useEffect(() => {
+    if(props.parsedUrl && props.parsedUrl.sepEventName){
+      const onSepEvent = (event) => {
+        log.debug(`${fnName} - onSepEvent`, event)
+        if (
+          event.detail
+          && event.detail.action === 'init-sep-map'
+          && event.detail.payload
+          && event.detail.payload.mapContainerId
+        ) {
+          log.debug(`${fnName} - onSepEvent - setting up the container`, event)
+          setContainer(document.getElementById(event.detail.payload.mapContainerId))
+        }
+      }
+
+      window.addEventListener(props.parsedUrl.sepEventName, onSepEvent)
+      const myEvent = new CustomEvent(props.parsedUrl.sepEventName, {
+        detail: {
+          action: "loaded-marketsense",
+          payload: true
+        }
+      })
+
+      // set the uuid for an unique leaflet container id
+      let uuid = uuidv4()
+      setUuid(uuid)
+
+      window.dispatchEvent(myEvent);
+
+      return () => {
+        window.removeEventListener(props.parsedUrl.sepEventName, onSepEvent)
       }
     }
-    window.addEventListener(props.sepEvents.name, onSepEvent)
-    let uuid = uuidv4()
-    setUuid(uuid)
-    return () => {
-      window.removeEventListener(props.sepEvents.name, onSepEvent)
-    }
-  }, [])
+  }, [props.parsedUrl])
 
   useEffect(() => {
     log.debug(`${fnName} - useEffect - [uuid, container]`, { process, props, uuid, container })
@@ -116,21 +148,23 @@ function Marketsense (props) {
     }
   }, [uuid, container])
 
+  const renderMapPortal = () => {
+    if(container){
+      return ReactDOM.createPortal((
+        <div
+          id={`leaflet-${uuid}`}
+          css={{
+            width: '100%',
+            minHeight: '300px'
+          }}>
+        </div>
+      ), container)
+    }
+    return null;
+  }
   return (
     <React.Fragment>
-      {(()=>{
-        if(container){
-          return ReactDOM.createPortal((
-            <div
-              id={`leaflet-${uuid}`}
-              css={{
-                width: '100%',
-                minHeight: '300px'
-              }}>
-            </div>
-          ), container)
-        }
-      })()}
+      {renderMapPortal()}
       <AddressSearch {...props}/>
     </React.Fragment>
   )
