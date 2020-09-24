@@ -210,25 +210,27 @@ function Marketsense (props) {
 
     let remoteDB = new PouchDB(`${urlPublic}/${dbName}`)
 
-    let viewIdFilterCount = `filter_development_esb_solarthermie/marketsenseFilterCount`
-    let viewIdFilter = `filter_development_esb_solarthermie/marketsenseFilter`
+    let viewIdFilterCount = `open_marketsense_1/filterCount`
+    let viewIdFilter = `open_marketsense_1/filter`
 
-    let docsCount = await remoteDB.query(viewIdFilterCount, {}).then((result) => {
+    let docsCount = 0;
+    docsCount = await remoteDB.query(viewIdFilterCount, {}).then((result) => {
       // handle result
-      log.debug(`${fnName} getPotentialsFromCloudant - count`, result)
+      log.debug(`${fnName} getPotentialsFromCloudant - result`, result)
       let docsCount = 0
       if (typeof result.rows[0] !== 'undefined') {
         docsCount = result.rows[0].value
       }
       return docsCount
     }).catch((e) => {
-      log.warn(`${fnName} getPotentialsFromCloudant - count`, { e })
-      return null
+      log.warn(`${fnName} getPotentialsFromCloudant - result`, { e })
+      return 0
     })
+    log.warn(`${fnName} getPotentialsFromCloudant - docsCount`, { docsCount })
 
     let chunkSize = 50 * 1000
     let results = []
-    for (let i = 0; i < docsCount; i = i + chunkSize) {
+    for (let i = 0; i < docsCount; i++) {
       let percentage = (i / docsCount) * 100
       // toast(`${context.config.overview.panelIdLabel} is building the overview. (${(percentage).toFixed(2)}%)`)
       let result = await remoteDB.query(viewIdFilter, {
@@ -244,6 +246,10 @@ function Marketsense (props) {
         throw e
       })
       results.push(result)
+      log.debug(`${fnName} getPotentialsFromCloudant - results`, {
+        results,
+        docsCount
+      })
       return results
     }
   }
