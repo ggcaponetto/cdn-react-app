@@ -1,9 +1,15 @@
-import React, { useEffect, useState, useContext, useReducer, useRef } from 'react'
+import React, { useEffect, useState, useContext, useReducer, useRef, useCallback } from 'react'
 import ReactDOM from 'react-dom'
 import * as L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
+import 'leaflet.heat/dist/leaflet-heat.js'
 import { v4 as uuidv4 } from 'uuid'
-import Button from '@material-ui/core/Button'
+import { Button, TextField, CircularProgress } from '@material-ui/core'
+import Autocomplete from '@material-ui/lab/Autocomplete'
+import _ from 'lodash'
+import axios from 'axios'
+import PouchDB from 'pouchdb'
+import PouchDBFind from 'pouchdb-find'
 
 /** @jsx jsx */
 import { jsx } from '@emotion/core'
@@ -24,13 +30,60 @@ function AddressSearch (props) {
   const fnName = 'AddressSearch'
   const [container, setContainer] = useState(null)
 
+  const [isLoadingObjectAddress, setIsLoadingObjectAddress] = useState(false)
+  const [objectAddress, setObjectAddress] = useState(null)
+  const [objectAddressResults, setObjectAddressResults] = useState([])
+  const onInputChange = async (e) => {
+    let value = e.target.value
+    if (value.length <= 2) return
+    console.log(value)
+    // set the spinner
+    setIsLoadingObjectAddress(true)
+    let response = await getAddresses(value)
+    // reset the spinner
+    setIsLoadingObjectAddress(false)
+    if (response.data.rows) {
+      let newResults = response.data.rows.map((row, i) => {
+        return {
+          id: i,
+          title: row.fields.address,
+          row: row
+        }
+      })
+      setObjectAddressResults(newResults)
+    } else {
+      setObjectAddressResults([])
+    }
+  }
+  const getAddresses = async (searchString) => {
+    let endpoint
+    let headers = {}
+    endpoint = `https://services.swissenergyplanning.ch/api/searchaddress`
+    // auth with token
+    headers = {
+      'Content-Type': 'multipart/form-data',
+      'Authorization': `Bearer ${props.parsedUrl.token}`
+    }
+    let bodyFormData = new FormData()
+    bodyFormData.set('searchtext', searchString)
+    let response = await axios(
+      {
+        method: 'post',
+        url: `${endpoint}`,
+        data: bodyFormData,
+        headers: headers
+      }
+    )
+    return response
+  }
+
   useEffect(() => {
     log.debug(`${fnName} - useEffect - []`, { props })
     setupLogs()
   }, [])
 
   useEffect(() => {
-    if(props.parsedUrl && props.parsedUrl.sepEventName){
+    if (props.parsedUrl && props.parsedUrl.sepEventName) {
       const onSepEvent = (event) => {
         log.debug(`${fnName} - onSepEvent`, event)
         if (
@@ -47,29 +100,67 @@ function AddressSearch (props) {
       window.addEventListener(props.parsedUrl.sepEventName, onSepEvent)
       const myEvent = new CustomEvent(props.parsedUrl.sepEventName, {
         detail: {
-          action: "loaded-address",
+          action: 'loaded-address',
           payload: true
         }
       })
-      window.dispatchEvent(myEvent);
+      window.dispatchEvent(myEvent)
       return () => {
         window.removeEventListener(props.parsedUrl.sepEventName, onSepEvent)
       }
     }
   }, [props.parsedUrl])
 
+  useEffect(() => {
+    log.debug(`${fnName} - useEffect - [objectAddress]`, { objectAddress, props })
+    if (objectAddress) {
+      const myEvent = new CustomEvent(props.parsedUrl.sepEventName, {
+        detail: {
+          action: `${fnName}:onObjectAddressChange`,
+          payload: objectAddress
+        }
+      })
+      window.dispatchEvent(myEvent)
+    }
+  }, [objectAddress])
+
   if (container) {
     return ReactDOM.createPortal((
       <div className={fnName}>
-        <Button
-          variant="contained"
-          color="primary"
-          onClick={() => {
-
+        <Autocomplete
+          id="object-address-autocomplete"
+          loading={isLoadingObjectAddress}
+          fullWidth
+          options={objectAddressResults}
+          getOptionLabel={(option) => option.title}
+          onChange={(e) => {
+            e.persist()
+            console.log('autocomplete - onChange', { e })
+            let address = objectAddressResults.filter((option, index) => index === parseInt(e.target.dataset.optionIndex))[0]
+            setObjectAddress(address)
           }}
-        >
-          Primary
-        </Button>
+          renderInput={(params) => (
+            <TextField
+              {...params}
+              InputProps={{
+                ...params.InputProps,
+                endAdornment: (
+                  <React.Fragment>
+                    {isLoadingObjectAddress ? <CircularProgress color="inherit" size={20}/> : null}
+                    {params.InputProps.endAdornment}
+                  </React.Fragment>
+                ),
+              }}
+              variant="outlined"
+              onChange={(e) => {
+                e.persist()
+                console.log('onChange', { e })
+                let debounced = _.debounce(onInputChange, 300, { leading: true })
+                debounced(e)
+              }}
+            />
+          )}
+        />
       </div>
     ), container)
   }
@@ -80,9 +171,10 @@ function Marketsense (props) {
   const fnName = 'Marketsense'
   const [uuid, setUuid] = useState(null)
   const [container, setContainer] = useState(null)
+  const [map, setMap] = useState(null)
   const initLeaflet = (uuid) => {
-    let map = L.map(`leaflet-${uuid}`, {})
-    map.setView([51.505, -0.09], 13)
+    let myMap = L.map(`leaflet-${uuid}`, {})
+    myMap.setView([51.505, -0.09], 13)
 
     L.tileLayer('https://api.mapbox.com/styles/v1/{id}/tiles/{z}/{x}/{y}?access_token=pk.eyJ1IjoibWFwYm94IiwiYSI6ImNpejY4NXVycTA2emYycXBndHRqcmZ3N3gifQ.rJcFIG214AriISLbB6B5aw', {
       maxZoom: 18,
@@ -92,22 +184,111 @@ function Marketsense (props) {
       id: 'mapbox/streets-v11',
       tileSize: 512,
       zoomOffset: -1
-    }).addTo(map)
+    })
+      .addTo(myMap)
 
     function onMapClick (e) {
       log.debug('clicked on map', e)
     }
 
-    map.on('click', onMapClick)
+    myMap.on('click', onMapClick)
+    setMap(myMap)
   }
 
-  useEffect(()=> {
+  const drawHeatmap = async function (points, map, options) {
+    let docs = await getPotentialsFromCloudant()
+    log.debug(`${fnName} - drawHeatmap - docs`, { docs })
+
+    /*let myHeatMapLayer = L.heatLayer(points, options)
+    log.debug(`${fnName} - myHeatMapLayer - [map]`, { myHeatMapLayer })
+    myHeatMapLayer.addTo(map)*/
+  }
+
+  const getPotentialsFromCloudant = async () => {
+    const urlPublic = 'https://washeduandishestylierger:b45b00cb570a9e649f159e1745b207266bb4005a@6c2fef2d-1c79-4b48-ba34-96193c57f4dd-bluemix.cloudantnosqldb.appdomain.cloud'
+    const dbName = 'sync_addr_db'
+
+    let remoteDB = new PouchDB(`${urlPublic}/${dbName}`)
+
+    let viewIdFilterCount = `filter_development_esb_solarthermie/marketsenseFilterCount`
+    let viewIdFilter = `filter_development_esb_solarthermie/marketsenseFilter`
+
+    let docsCount = await remoteDB.query(viewIdFilterCount, {}).then((result) => {
+      // handle result
+      log.debug(`${fnName} getPotentialsFromCloudant - count`, result)
+      let docsCount = 0
+      if (typeof result.rows[0] !== 'undefined') {
+        docsCount = result.rows[0].value
+      }
+      return docsCount
+    }).catch((e) => {
+      log.warn(`${fnName} getPotentialsFromCloudant - count`, { e })
+      return null
+    })
+
+    let chunkSize = 50 * 1000
+    let results = []
+    for (let i = 0; i < docsCount; i = i + chunkSize) {
+      let percentage = (i / docsCount) * 100
+      // toast(`${context.config.overview.panelIdLabel} is building the overview. (${(percentage).toFixed(2)}%)`)
+      let result = await remoteDB.query(viewIdFilter, {
+        limit: chunkSize,
+        skip: i
+      }).catch((e) => {
+        log.debug(`${fnName} getPotentialsFromCloudant - query error`, {
+          e,
+          i,
+          chunkSize,
+          docsCount
+        })
+        throw e
+      })
+      results.push(result)
+      return results
+    }
+  }
+
+  useEffect(() => {
     log.debug(`${fnName} - useEffect - []`, { props })
     setupLogs()
   }, [])
 
   useEffect(() => {
-    if(props.parsedUrl && props.parsedUrl.sepEventName){
+    log.debug(`${fnName} - useEffect - [map]`, { props })
+    if (props.parsedUrl && props.parsedUrl.sepEventName) {
+      const onSepEvent = (event) => {
+        log.debug(`${fnName} - onSepEvent`, event)
+        if (
+          event.detail
+          && event.detail.action === `AddressSearch:onObjectAddressChange`
+          && event.detail.payload
+        ) {
+          log.debug(`${fnName} - onSepEvent - search address changed`, event)
+          map.setView(
+            [51.505, -0.09]
+          )
+          // draw the heatmap
+          drawHeatmap(
+            [
+              [51.505, -0.09],
+              [51.505, -0.08],
+              [51.505, -0.07]
+            ],
+            map,
+            {
+              radius: 25
+            })
+        }
+      }
+      window.addEventListener(props.parsedUrl.sepEventName, onSepEvent)
+      return () => {
+        window.removeEventListener(props.parsedUrl.sepEventName, onSepEvent)
+      }
+    }
+  }, [map])
+
+  useEffect(() => {
+    if (props.parsedUrl && props.parsedUrl.sepEventName && !map) {
       const onSepEvent = (event) => {
         log.debug(`${fnName} - onSepEvent`, event)
         if (
@@ -120,11 +301,10 @@ function Marketsense (props) {
           setContainer(document.getElementById(event.detail.payload.mapContainerId))
         }
       }
-
       window.addEventListener(props.parsedUrl.sepEventName, onSepEvent)
       const myEvent = new CustomEvent(props.parsedUrl.sepEventName, {
         detail: {
-          action: "loaded-marketsense",
+          action: 'loaded-marketsense',
           payload: true
         }
       })
@@ -133,7 +313,7 @@ function Marketsense (props) {
       let uuid = uuidv4()
       setUuid(uuid)
 
-      window.dispatchEvent(myEvent);
+      window.dispatchEvent(myEvent)
 
       return () => {
         window.removeEventListener(props.parsedUrl.sepEventName, onSepEvent)
@@ -149,7 +329,7 @@ function Marketsense (props) {
   }, [uuid, container])
 
   const renderMapPortal = () => {
-    if(container){
+    if (container) {
       return ReactDOM.createPortal((
         <div
           id={`leaflet-${uuid}`}
@@ -160,7 +340,7 @@ function Marketsense (props) {
         </div>
       ), container)
     }
-    return null;
+    return null
   }
   return (
     <React.Fragment>

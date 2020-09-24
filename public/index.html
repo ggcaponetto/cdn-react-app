@@ -19,6 +19,7 @@
   // change path to match your file:
   window.onload = function () {
     const sepEventName = 'sep-event'
+    const token = "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJnZW9pbXBhY3RfcHVibGljIiwibmJmIjoiMTU4NzkyMjE3MyIsImp0aSI6ImZlZmZlYjc4LTIyYWUtNGU0YS1hZGUxLTA3NmU5ZGUyNzk3OSIsImh0dHA6Ly9zY2hlbWFzLnhtbHNvYXAub3JnL3dzLzIwMDUvMDUvaWRlbnRpdHkvY2xhaW1zL25hbWVpZGVudGlmaWVyIjoiZjhkMzgwNmYtNzhkNi00OWE0LWE0Y2MtYTM5NjVkNGEzNjVjIiwiaHR0cDovL3NjaGVtYXMubWljcm9zb2Z0LmNvbS93cy8yMDA4LzA2L2lkZW50aXR5L2NsYWltcy9yb2xlIjoiUHVibGljIiwiTWFuZGFudCI6Imdlb2ltcGFjdF9wdWJsaWMiLCJBdXRob3JpemVkUmVzb3VyY2VzIjoiKmVuZXJneXByb2plY3RzLWJ5LXBvbHlnb24qOlBPU1R8KmF1dGhpbmZvKjpHRVR8KmxvZ2luLXN0YXR1cyo6R0VUfCpjdXJyZW50LSo6R0VUfCpjaGFuZ2UtcHVibGljdG9rZW4tdXNlcm5hbWUqOkdFVHwqZmlsZXMqOkdFVHwqcm9vZi1zdGF0aXN0aWNzLWJ5LXN3aXNzemlwY29kZSo6R0VUfCpyb29mLXN0YXRpc3RpY3MtYnktYWRkcmVzc2lkKjpHRVR8KnJvb2Ytc3RhdGlzdGljcy1zd2l0emVybGFuZCo6R0VUfCpyb29mLWdlb21ldHJpZXMqOkdFVHwqYWRkcmVzc3BvaW50cy1maW5kKjpHRVR8KmNhbXBhaWduZGF0YSo6R0VULFBVVHwqc2VhcmNoYWRkcmVzcyo6UE9TVCIsIkF1dGhvcml6ZWRSZWNvcmRzIjoiKmVuZXJneXByb2plY3RzLWJ5LXBvbHlnb24qOmlzcHVibGljPXRydWV8KmZpbGVzKjppc3B1YmxpYz10cnVlIiwiRXhjbHVkZWRGaWVsZHMiOiJub25lIiwiRm9yYmlkZGVuRmlsdGVycyI6Im5vbmUiLCJleHAiOjE5MDM0NTQ5NzMsImlzcyI6IkN3S0F5NWpJbVlTSk9RUW5obEF3cnZLT0k1RWtmMFNpIiwiYXVkIjoiZW5lcmd5YXBwcy5jaCJ9.pyzrfdbS-HxwzOQ1RY4UOMyHmbQNxXosK0pz30RqP0dlzX9eWXh-KXo5StCq0qdpewp_OzM-0UlJi0AWg7ML2QHzBFJLHXuq0CTM5jhhr2vry5yfQ2i0K47TZXqJZPk5CgksLLjImHcbKw4VtpE34vs6v5l6iGd2-LWKQaeGMehdNJmoA9ufaaZt_tuM9CletJ3fHNQeXS56IgjkyXK1SF0E-t-FWDqSdvotePvR3eABJvKkUYwnxabGAWy5n2JeHMzmH0lX9HOGSE5-wyqAUR3kYzdbei_kjUzmCcwu4Ve50EBQaJViq4sQhJRTE7MafWqdk47UIZ5TfqTCDiaOVw"
     window.addEventListener(sepEventName, (e) => {
       console.log('host: got event', { action: e.detail.action })
       if(e.detail.action === "loaded-marketsense"){
@@ -42,18 +43,10 @@
         }))
       }
     })
-    /*window.dispatchEvent(new CustomEvent(sepEventName, {
-      detail: {
-        action: 'init-sep-address',
-        payload: {
-          searchContainerId: "sep-address"
-        }
-      }
-    }))*/
 
     let script = document.getElementById('external-react-app')
     script.async = true
-    script.src = 'bundle.js?scriptId=sep-core&sepEventName=' + sepEventName + '&v=' + Date.now()
+    script.src = 'bundle.js?scriptId=sep-core&sepEventName=' + sepEventName + '&v=' + Date.now() + "&token=" + token
     script.addEventListener('load', function () {
       // the react app has rendered once
       console.log('external-react-app: script loaded')
