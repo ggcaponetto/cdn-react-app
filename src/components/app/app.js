@@ -26,7 +26,11 @@ const getParsedUrl = () => {
 
 function App (props) {
   const fnName = 'App'
-  let [appProps, setAppProps] = useState({})
+  let [appProps, setAppProps] = useState({
+    env: {
+      APIGatewayBase: `https://services.swissenergyplanning.ch`
+    }
+  })
 
   useEffect(() => {
     const url = new URL(script.src)

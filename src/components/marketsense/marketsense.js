@@ -26,6 +26,45 @@ const setupLogs = () => {
   }
 }
 
+const getNearAddresses = async (lat, lng) => {
+  return axios( {
+    method: 'get',
+    url: `${props.env.APIGatewayBase}/api/addresspoints-nearest-by-coordinates?x=${lng}&y=${lat}`,
+    headers: {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+      'Authorization': `Bearer ${props.parsedUrl.token}`
+    }
+  })
+}
+const getAddress = async (props, addressId) => {
+  return axios( {
+    method: 'get',
+    url: `${props.env.APIGatewayBase}/api/marketsense/addresspoint-by-addressid/${addressId}`,
+    headers: {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+      'Authorization': `Bearer ${props.parsedUrl.token}`
+    }
+  })
+}
+const getAddresses = async (props, searchString) => {
+  let bodyFormData = new FormData()
+  bodyFormData.set('searchtext', searchString)
+  let response = await axios(
+    {
+      method: 'post',
+      url: `${props.env.APIGatewayBase}/api/searchaddress`,
+      data: bodyFormData,
+      headers: {
+        'Content-Type': 'multipart/form-data',
+        'Authorization': `Bearer ${props.parsedUrl.token}`
+      }
+    }
+  )
+  return response
+}
+
 function AddressSearch (props) {
   const fnName = 'AddressSearch'
   const [container, setContainer] = useState(null)
@@ -39,7 +78,7 @@ function AddressSearch (props) {
     console.log(value)
     // set the spinner
     setIsLoadingObjectAddress(true)
-    let response = await getAddresses(value)
+    let response = await getAddresses(props, value)
     // reset the spinner
     setIsLoadingObjectAddress(false)
     if (response.data.rows) {
@@ -54,27 +93,6 @@ function AddressSearch (props) {
     } else {
       setObjectAddressResults([])
     }
-  }
-  const getAddresses = async (searchString) => {
-    let endpoint
-    let headers = {}
-    endpoint = `https://services.swissenergyplanning.ch/api/searchaddress`
-    // auth with token
-    headers = {
-      'Content-Type': 'multipart/form-data',
-      'Authorization': `Bearer ${props.parsedUrl.token}`
-    }
-    let bodyFormData = new FormData()
-    bodyFormData.set('searchtext', searchString)
-    let response = await axios(
-      {
-        method: 'post',
-        url: `${endpoint}`,
-        data: bodyFormData,
-        headers: headers
-      }
-    )
-    return response
   }
 
   useEffect(() => {
@@ -286,6 +304,13 @@ function Marketsense (props) {
   useEffect(() => {
     log.debug(`${fnName} - useEffect - [map]`, { props })
     if (props.parsedUrl && props.parsedUrl.sepEventName) {
+      const setMap = async (addressId) => {
+        let address = await getAddress(props, addressId)
+        log.debug(`${fnName} - onSepEvent - search address changed - address`, address)
+        // const defaultPosition = [46.948484, 8.358491]
+        // const defaultZoom = 9
+        // map.setView(defaultPosition, defaultZoom)
+      }
       const onSepEvent = (event) => {
         log.debug(`${fnName} - onSepEvent`, event)
         if (
@@ -294,10 +319,8 @@ function Marketsense (props) {
           && event.detail.payload
         ) {
           log.debug(`${fnName} - onSepEvent - search address changed`, event)
-
-          const defaultPosition = [46.948484, 8.358491]
-          const defaultZoom = 9
-          map.setView(defaultPosition, defaultZoom)
+          setMap(event.detail.payload.row.fields.id)
+          // let addresses = getNearAddresses(event.detail.objectAddress.lat, event.detail.objectAddress.long)
         }
       }
       window.addEventListener(props.parsedUrl.sepEventName, onSepEvent)
