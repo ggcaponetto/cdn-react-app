@@ -27,7 +27,7 @@ const setupLogs = () => {
 }
 
 const getNearAddresses = async (lat, lng) => {
-  return axios( {
+  return axios({
     method: 'get',
     url: `${props.env.APIGatewayBase}/api/addresspoints-nearest-by-coordinates?x=${lng}&y=${lat}`,
     headers: {
@@ -38,7 +38,7 @@ const getNearAddresses = async (lat, lng) => {
   })
 }
 const getAddress = async (props, addressId) => {
-  return axios( {
+  return axios({
     method: 'get',
     url: `${props.env.APIGatewayBase}/api/marketsense/addresspoint-by-addressid/${addressId}`,
     headers: {
@@ -63,6 +63,35 @@ const getAddresses = async (props, searchString) => {
     }
   )
   return response
+}
+const getPublicMarketsenseData = async (props, addressId) => {
+  let endpoints = [
+    `${props.env.APIGatewayBase}/api/marketsense/addresspoint-by-addressid/${addressId}`,
+    `${props.env.APIGatewayBase}/api/marketsense/emptyparcel-addresspoint-by-addressid/${addressId}`,
+    `${props.env.APIGatewayBase}/api/marketsense/parcelfeatures-by-addressid/${addressId}`,
+    `${props.env.APIGatewayBase}/api/marketsense/districtfeatures-by-addressid/${addressId}`,
+    `${props.env.APIGatewayBase}/api/marketsense/parcelbuildfeatures-by-addressid/${addressId}`,
+    `${props.env.APIGatewayBase}/api/marketsense/parcelbuildfeatures-statistics-by-parcel-by-addressid/${addressId}`,
+    `${props.env.APIGatewayBase}/api/marketsense/addresspoints-statistics-by-egid-by-addressid/${addressId}`,
+    `${props.env.APIGatewayBase}/api/marketsense/addresspoints-statistics-by-parcel-by-addressid/${addressId}`,
+    `${props.env.APIGatewayBase}/api/marketsense/gwrdetails-statistics-by-parcel-by-addressid/${addressId}`,
+    `${props.env.APIGatewayBase}/api/marketsense/roof-statistics-by-building-by-addressid/${addressId}`,
+    `${props.env.APIGatewayBase}/api/marketsense/roof-statistics-by-parcel-by-addressid/${addressId}`,
+    `${props.env.APIGatewayBase}/api/marketsense/zefix-statistics-by-egid-by-addressid/${addressId}`,
+    `${props.env.APIGatewayBase}/api/marketsense/zefix-statistics-by-parcel-by-addressid/${addressId}`
+  ]
+  let requests = endpoints.map((endopoint) => {
+    return axios({
+      method: 'get',
+      url: endopoint,
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'Authorization': `Bearer ${props.parsedUrl.token}`
+      }
+    })
+  })
+  return await Promise.all(requests)
 }
 
 function AddressSearch (props) {
@@ -190,12 +219,12 @@ function Marketsense (props) {
   const [uuid, setUuid] = useState(null)
   const [container, setContainer] = useState(null)
   const [map, setMap] = useState(null)
-  const [heatLayer, setHeatLayer] = useState(null);
+  const [heatLayer, setHeatLayer] = useState(null)
   const initLeaflet = (uuid) => {
     let myMap = L.map(`leaflet-${uuid}`, {})
 
     const defaultPosition = [46.948484, 8.358491]
-    const defaultZoom = 9;
+    const defaultZoom = 8
     myMap.setView(defaultPosition, defaultZoom)
 
     L.tileLayer('https://api.mapbox.com/styles/v1/{id}/tiles/{z}/{x}/{y}?access_token=pk.eyJ1IjoibWFwYm94IiwiYSI6ImNpejY4NXVycTA2emYycXBndHRqcmZ3N3gifQ.rJcFIG214AriISLbB6B5aw', {
@@ -209,12 +238,15 @@ function Marketsense (props) {
     })
       .addTo(myMap)
 
-    function onMapClick (e) {
+    async function onMapClick (e) {
       log.debug('clicked on map', e)
+      // let addressResponse = await getAddress(props, addressId)
+      // let address = addressResponse.data[0]
+      // let addressData = await getPublicMarketsenseData(props, address.id)
     }
 
     myMap.on('click', onMapClick)
-    return myMap;
+    return myMap
   }
 
   const drawHeatmap = async function (map, options) {
@@ -224,15 +256,15 @@ function Marketsense (props) {
     log.debug(`${fnName} - drawHeatmap - docs`, { docs })
 
     let heatmapPoints = docs.map(doc => {
-      let split = doc.value.split(",").map(value => parseFloat(value))
-      return split;
+      let split = doc.value.split(',').map(value => parseFloat(value))
+      return split
     })
     log.debug(`${fnName} - drawHeatmap`, { heatmapPoints })
     let myHeatLayer = L.heatLayer(heatmapPoints, options)
     log.debug(`${fnName} - myHeatLayer - [map]`, { myHeatLayer, heatmapPoints })
     setHeatLayer((prevHeatLayer) => {
       // remove the old heatmap layer
-      if(prevHeatLayer){
+      if (prevHeatLayer) {
         map.removeLayer(prevHeatLayer)
       }
       myHeatLayer.addTo(map)
@@ -287,12 +319,12 @@ function Marketsense (props) {
     }
 
     let allDocs = results.reduce((acc, curr) => {
-      return acc.concat(curr.rows);
+      return acc.concat(curr.rows)
     }, [])
-    return allDocs;
+    return allDocs
   }
 
-  useEffect(()=>{
+  useEffect(() => {
 
   }, [heatLayer])
 
@@ -305,11 +337,13 @@ function Marketsense (props) {
     log.debug(`${fnName} - useEffect - [map]`, { props })
     if (props.parsedUrl && props.parsedUrl.sepEventName) {
       const setMap = async (addressId) => {
-        let address = await getAddress(props, addressId)
-        log.debug(`${fnName} - onSepEvent - search address changed - address`, address)
-        // const defaultPosition = [46.948484, 8.358491]
-        // const defaultZoom = 9
-        // map.setView(defaultPosition, defaultZoom)
+        let addressResponse = await getAddress(props, addressId)
+        let address = addressResponse.data[0]
+        let addressData = await getPublicMarketsenseData(props, address.id)
+        log.debug(`${fnName} - onSepEvent - search address changed - address`, { addressResponse, addressData })
+        const defaultPosition = [address.lat, address.long]
+        const defaultZoom = 21
+        map.setView(defaultPosition, defaultZoom)
       }
       const onSepEvent = (event) => {
         log.debug(`${fnName} - onSepEvent`, event)
