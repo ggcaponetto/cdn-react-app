@@ -172,9 +172,13 @@ function Marketsense (props) {
   const [uuid, setUuid] = useState(null)
   const [container, setContainer] = useState(null)
   const [map, setMap] = useState(null)
+  const [heatLayer, setHeatLayer] = useState(null);
   const initLeaflet = (uuid) => {
     let myMap = L.map(`leaflet-${uuid}`, {})
-    myMap.setView([51.505, -0.09], 13)
+
+    const defaultPosition = [46.948484, 8.358491]
+    const defaultZoom = 9;
+    myMap.setView(defaultPosition, defaultZoom)
 
     L.tileLayer('https://api.mapbox.com/styles/v1/{id}/tiles/{z}/{x}/{y}?access_token=pk.eyJ1IjoibWFwYm94IiwiYSI6ImNpejY4NXVycTA2emYycXBndHRqcmZ3N3gifQ.rJcFIG214AriISLbB6B5aw', {
       maxZoom: 18,
@@ -192,29 +196,39 @@ function Marketsense (props) {
     }
 
     myMap.on('click', onMapClick)
-    setMap(myMap)
+    return myMap;
   }
 
-  const drawHeatmap = async function (points, map, options) {
-    let docs = await getPotentialsFromCloudant()
+  const drawHeatmap = async function (map, options) {
+    let filterCountViewId = `open_marketsense_1/filterCount`
+    let filterViewId = `open_marketsense_1/filter`
+    let docs = await getPotentialsFromCloudant(filterViewId, filterCountViewId)
     log.debug(`${fnName} - drawHeatmap - docs`, { docs })
 
-    /*let myHeatMapLayer = L.heatLayer(points, options)
-    log.debug(`${fnName} - myHeatMapLayer - [map]`, { myHeatMapLayer })
-    myHeatMapLayer.addTo(map)*/
+    let heatmapPoints = docs.map(doc => {
+      let split = doc.value.split(",").map(value => parseFloat(value))
+      return split;
+    })
+    log.debug(`${fnName} - drawHeatmap`, { heatmapPoints })
+    let myHeatLayer = L.heatLayer(heatmapPoints, options)
+    log.debug(`${fnName} - myHeatLayer - [map]`, { myHeatLayer, heatmapPoints })
+    setHeatLayer((prevHeatLayer) => {
+      // remove the old heatmap layer
+      if(prevHeatLayer){
+        map.removeLayer(prevHeatLayer)
+      }
+      myHeatLayer.addTo(map)
+    })
   }
 
-  const getPotentialsFromCloudant = async () => {
+  const getPotentialsFromCloudant = async (filterViewId, filterCountViewId) => {
     const urlPublic = 'https://washeduandishestylierger:b45b00cb570a9e649f159e1745b207266bb4005a@6c2fef2d-1c79-4b48-ba34-96193c57f4dd-bluemix.cloudantnosqldb.appdomain.cloud'
     const dbName = 'sync_addr_db'
 
     let remoteDB = new PouchDB(`${urlPublic}/${dbName}`)
 
-    let viewIdFilterCount = `open_marketsense_1/filterCount`
-    let viewIdFilter = `open_marketsense_1/filter`
-
-    let docsCount = 0;
-    docsCount = await remoteDB.query(viewIdFilterCount, {}).then((result) => {
+    let docsCount = 0
+    docsCount = await remoteDB.query(filterCountViewId, {}).then((result) => {
       // handle result
       log.debug(`${fnName} getPotentialsFromCloudant - result`, result)
       let docsCount = 0
@@ -228,18 +242,20 @@ function Marketsense (props) {
     })
     log.warn(`${fnName} getPotentialsFromCloudant - docsCount`, { docsCount })
 
-    let chunkSize = 50 * 1000
+    let chunkSize = 500 * 1000
     let results = []
-    for (let i = 0; i < docsCount; i++) {
+
+    for (let i = 0; i < docsCount; i = i + chunkSize) {
       let percentage = (i / docsCount) * 100
-      // toast(`${context.config.overview.panelIdLabel} is building the overview. (${(percentage).toFixed(2)}%)`)
-      let result = await remoteDB.query(viewIdFilter, {
+      log.debug(`${fnName} getPotentialsFromCloudant - progress ${percentage}`, {
+        percentage
+      })
+      let result = await remoteDB.query(filterViewId, {
         limit: chunkSize,
         skip: i
       }).catch((e) => {
         log.debug(`${fnName} getPotentialsFromCloudant - query error`, {
           e,
-          i,
           chunkSize,
           docsCount
         })
@@ -250,9 +266,17 @@ function Marketsense (props) {
         results,
         docsCount
       })
-      return results
     }
+
+    let allDocs = results.reduce((acc, curr) => {
+      return acc.concat(curr.rows);
+    }, [])
+    return allDocs;
   }
+
+  useEffect(()=>{
+
+  }, [heatLayer])
 
   useEffect(() => {
     log.debug(`${fnName} - useEffect - []`, { props })
@@ -270,20 +294,10 @@ function Marketsense (props) {
           && event.detail.payload
         ) {
           log.debug(`${fnName} - onSepEvent - search address changed`, event)
-          map.setView(
-            [51.505, -0.09]
-          )
-          // draw the heatmap
-          drawHeatmap(
-            [
-              [51.505, -0.09],
-              [51.505, -0.08],
-              [51.505, -0.07]
-            ],
-            map,
-            {
-              radius: 25
-            })
+
+          const defaultPosition = [46.948484, 8.358491]
+          const defaultZoom = 9
+          map.setView(defaultPosition, defaultZoom)
         }
       }
       window.addEventListener(props.parsedUrl.sepEventName, onSepEvent)
@@ -330,7 +344,14 @@ function Marketsense (props) {
   useEffect(() => {
     log.debug(`${fnName} - useEffect - [uuid, container]`, { process, props, uuid, container })
     if (uuid && container) {
-      initLeaflet(uuid)
+      let myMap = initLeaflet(uuid)
+      // draw the heatmap
+      drawHeatmap(
+        myMap,
+        {
+          radius: 25
+        })
+      setMap(myMap)
     }
   }, [uuid, container])
 
@@ -341,7 +362,7 @@ function Marketsense (props) {
           id={`leaflet-${uuid}`}
           css={{
             width: '100%',
-            minHeight: '300px'
+            height: '100%',
           }}>
         </div>
       ), container)
