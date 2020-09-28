@@ -13,6 +13,7 @@
 <h3>some website content not part of react</h3>
 <div id="sep-address"></div>
 <h3>some website content not part of react</h3>
+<div id="sep-object-display"></div>
 
 <script id="external-react-app"></script>
 <script type="text/javascript">
@@ -39,6 +40,16 @@
             action: 'init-sep-address',
             payload: {
               addressContainerId: 'sep-address'
+            }
+          }
+        }))
+      }
+      if(e.detail.action === "loaded-sep-object-display"){
+        window.dispatchEvent(new CustomEvent(sepEventName, {
+          detail: {
+            action: 'init-sep-object-display',
+            payload: {
+              objectDisplayContainerId: 'sep-object-display'
             }
           }
         }))

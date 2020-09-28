@@ -4,12 +4,18 @@ import * as L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import 'leaflet.heat/dist/leaflet-heat.js'
 import { v4 as uuidv4 } from 'uuid'
-import { Button, TextField, CircularProgress } from '@material-ui/core'
+import { Button, TextField, CircularProgress, LinearProgress } from '@material-ui/core'
+import { makeStyles } from '@material-ui/core/styles'
+import Card from '@material-ui/core/Card'
+import CardActions from '@material-ui/core/CardActions'
+import CardContent from '@material-ui/core/CardContent'
+import Typography from '@material-ui/core/Typography'
 import Autocomplete from '@material-ui/lab/Autocomplete'
 import _ from 'lodash'
 import axios from 'axios'
 import PouchDB from 'pouchdb'
 import PouchDBFind from 'pouchdb-find'
+import ReactJson from 'react-json-view'
 
 /** @jsx jsx */
 import { jsx } from '@emotion/core'
@@ -26,10 +32,10 @@ const setupLogs = () => {
   }
 }
 
-const getNearAddresses = async (lat, lng) => {
+const getNearAddresses = async (props, lat, lng) => {
   return axios({
     method: 'get',
-    url: `${props.env.APIGatewayBase}/api/addresspoints-nearest-by-coordinates?x=${lng}&y=${lat}`,
+    url: `${props.env.APIGatewayBase}/api/addresspoints-nearest-by-coordinates?x=${lng}&y=${lat}&srid=4326`,
     headers: {
       'Content-Type': 'application/json',
       'Accept': 'application/json',
@@ -92,6 +98,105 @@ const getPublicMarketsenseData = async (props, addressId) => {
     })
   })
   return await Promise.all(requests)
+}
+
+const useStyles = makeStyles({
+  root: {
+    minWidth: 275,
+  },
+  bullet: {
+    display: 'inline-block',
+    margin: '0 2px',
+    transform: 'scale(0.8)',
+  },
+  title: {
+    fontSize: 14,
+  },
+  pos: {
+    marginBottom: 12,
+  },
+})
+export default function SimpleCard (props) {
+  const classes = useStyles()
+  return (
+    <Card className={classes.root}>
+      <CardContent>
+        <Typography className={classes.title} color="textSecondary" gutterBottom>
+          {props.object.address.street} {props.object.address.houseNumber}, {props.object.address.swissZipCode} {props.object.address.town}
+        </Typography>
+        <Typography variant="body2" component="p">
+          <ReactJson
+            src={props.object.addressData.map(data => data[0].data)}
+          />
+        </Typography>
+      </CardContent>
+    </Card>
+  )
+}
+
+function ObjectDisplay (props) {
+  const fnName = 'ObjectDisplay'
+  const [container, setContainer] = useState(null)
+  const [object, setObject] = useState(null)
+  useEffect(() => {
+    log.debug(`${fnName} - useEffect - []`, { props })
+    setupLogs()
+  }, [])
+
+  useEffect(() => {
+    if (props.parsedUrl && props.parsedUrl.sepEventName) {
+      const onSepEvent = (event) => {
+        log.debug(`${fnName} - onSepEvent`, event)
+        if (
+          event.detail
+          && event.detail.action === 'init-sep-object-display'
+          && event.detail.payload
+          && event.detail.payload.objectDisplayContainerId
+        ) {
+          log.debug(`${fnName} - onSepEvent - setting up the container`, event)
+          setContainer(document.getElementById(event.detail.payload.objectDisplayContainerId))
+        }
+
+        if (
+          event.detail
+          && event.detail.action === `Marketsense:onMapClick`
+          && event.detail.payload
+        ) {
+          log.debug(`${fnName} - onSepEvent - search address changed`, event)
+          setObject(event.detail.payload)
+        }
+      }
+
+      window.addEventListener(props.parsedUrl.sepEventName, onSepEvent)
+      const myEvent = new CustomEvent(props.parsedUrl.sepEventName, {
+        detail: {
+          action: 'loaded-sep-object-display',
+          payload: true
+        }
+      })
+      window.dispatchEvent(myEvent)
+      return () => {
+        window.removeEventListener(props.parsedUrl.sepEventName, onSepEvent)
+      }
+    }
+  }, [props.parsedUrl])
+
+  useEffect(() => {
+    log.debug(`${fnName} - useEffect - [object]`, { object, props })
+  }, [object])
+
+  if (container) {
+    return ReactDOM.createPortal((
+      <div className={fnName}>
+        {(() => {
+          if (object) {
+            return <SimpleCard object={object}/>
+          }
+        })()}
+      </div>
+    ), container)
+  }
+  return null
 }
 
 function AddressSearch (props) {
@@ -220,6 +325,7 @@ function Marketsense (props) {
   const [container, setContainer] = useState(null)
   const [map, setMap] = useState(null)
   const [heatLayer, setHeatLayer] = useState(null)
+  const [isLoadingOverview, setIsLoadingOverview] = useState(false)
   const initLeaflet = (uuid) => {
     let myMap = L.map(`leaflet-${uuid}`, {})
 
@@ -240,9 +346,25 @@ function Marketsense (props) {
 
     async function onMapClick (e) {
       log.debug('clicked on map', e)
+      let nearestAddresses = await getNearAddresses(props, e.latlng.lat, e.latlng.lng)
       // let addressResponse = await getAddress(props, addressId)
-      // let address = addressResponse.data[0]
-      // let addressData = await getPublicMarketsenseData(props, address.id)
+      let address = nearestAddresses.data[0]
+      if (address) {
+        let addressData = await getPublicMarketsenseData(props, address.id)
+        log.debug(`${fnName} - onSepEvent - search address changed - addressData`, { addressData, address })
+
+        const myEvent = new CustomEvent(props.parsedUrl.sepEventName, {
+          detail: {
+            action: `${fnName}:onMapClick`,
+            payload: {
+              address,
+              addressData
+            }
+          }
+        })
+        window.dispatchEvent(myEvent)
+      }
+      log.debug(`${fnName} - onSepEvent - search address changed - address`, { nearestAddresses, e })
     }
 
     myMap.on('click', onMapClick)
@@ -252,6 +374,7 @@ function Marketsense (props) {
   const drawHeatmap = async function (map, options) {
     let filterCountViewId = `open_marketsense_1/filterCount`
     let filterViewId = `open_marketsense_1/filter`
+    setIsLoadingOverview(true)
     let docs = await getPotentialsFromCloudant(filterViewId, filterCountViewId)
     log.debug(`${fnName} - drawHeatmap - docs`, { docs })
 
@@ -268,6 +391,7 @@ function Marketsense (props) {
         map.removeLayer(prevHeatLayer)
       }
       myHeatLayer.addTo(map)
+      setIsLoadingOverview(false)
     })
   }
 
@@ -415,13 +539,16 @@ function Marketsense (props) {
   const renderMapPortal = () => {
     if (container) {
       return ReactDOM.createPortal((
-        <div
-          id={`leaflet-${uuid}`}
-          css={{
-            width: '100%',
-            height: '100%',
-          }}>
-        </div>
+        <React.Fragment>
+          {isLoadingOverview ? <LinearProgress/> : null}
+          <div
+            id={`leaflet-${uuid}`}
+            css={{
+              width: '100%',
+              height: '100%',
+            }}>
+          </div>
+        </React.Fragment>
       ), container)
     }
     return null
@@ -430,6 +557,7 @@ function Marketsense (props) {
     <React.Fragment>
       {renderMapPortal()}
       <AddressSearch {...props}/>
+      <ObjectDisplay {...props}/>
     </React.Fragment>
   )
 }
