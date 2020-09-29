@@ -126,7 +126,7 @@ export default function SimpleCard (props) {
         </Typography>
         <Typography variant="body2" component="p">
           <ReactJson
-            src={props.object.addressData.map(data => data[0].data)}
+            src={props.object.addressData}
           />
         </Typography>
       </CardContent>
@@ -222,6 +222,10 @@ function AddressSearch (props) {
           title: row.fields.address,
           row: row
         }
+      }).sort((a, b) => {
+        if(a.title < b.title) { return -1; }
+        if(a.title > b.title) { return 1; }
+        return 0;
       })
       setObjectAddressResults(newResults)
     } else {
