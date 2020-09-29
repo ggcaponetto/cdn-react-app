@@ -583,7 +583,14 @@ function Marketsense (props) {
         map.setView(defaultPosition, defaultZoom)
       }
       const drawMarker = async (address) => {
-        let marker = L.marker([address.lat, address.long])
+
+        let marker = L.circle([address.lat, address.long], {
+          color: props.theme.palette.primary.main,
+          fillColor: props.theme.palette.primary.light,
+          fillOpacity: 0.5,
+          radius: 5
+        }).addTo(map);
+
         setSearchMarker((prevMarker) => {
           if (prevMarker) {
             map.removeLayer(prevMarker)
