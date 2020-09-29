@@ -21,6 +21,14 @@ import ReactJson from 'react-json-view'
 import { jsx } from '@emotion/core'
 import log from 'loglevel'
 
+import icon from 'leaflet/dist/images/marker-icon.png';
+import iconShadow from 'leaflet/dist/images/marker-shadow.png';
+let DefaultIcon = L.icon({
+  iconUrl: icon,
+  shadowUrl: iconShadow
+});
+L.Marker.prototype.options.icon = DefaultIcon;
+
 const setupLogs = () => {
   if (process.env.REACT_APP_ENV === 'production') {
     log.setLevel('debug')
@@ -329,6 +337,7 @@ function Marketsense (props) {
   const [container, setContainer] = useState(null)
   const [map, setMap] = useState(null)
   const [heatLayer, setHeatLayer] = useState(null)
+  const [searchMarker, setSearchMarker] = useState(null)
   const [isLoadingOverview, setIsLoadingOverview] = useState(false)
   const initLeaflet = (uuid) => {
     let myMap = L.map(`leaflet-${uuid}`, {})
@@ -464,16 +473,29 @@ function Marketsense (props) {
   useEffect(() => {
     log.debug(`${fnName} - useEffect - [map]`, { props })
     if (props.parsedUrl && props.parsedUrl.sepEventName) {
-      const setMap = async (addressId) => {
+      const getAddressById = async (addressId) => {
         let addressResponse = await getAddress(props, addressId)
-        let address = addressResponse.data[0]
+        let address = addressResponse.data[0];
+        return address;
+      }
+      const setMap = async (address) => {
         let addressData = await getPublicMarketsenseData(props, address.id)
-        log.debug(`${fnName} - onSepEvent - search address changed - address`, { addressResponse, addressData })
+        log.debug(`${fnName} - onSepEvent - search address changed - address`, {  addressData })
         const defaultPosition = [address.lat, address.long]
         const defaultZoom = 21
         map.setView(defaultPosition, defaultZoom)
       }
-      const onSepEvent = (event) => {
+      const drawMarker = async (address) => {
+        let marker = L.marker([address.lat, address.long]);
+        setSearchMarker((prevMarker) => {
+          if(prevMarker){
+            map.removeLayer(prevMarker);
+          }
+          marker.addTo(map);
+          return marker
+        })
+      }
+      const onSepEvent = async (event) => {
         log.debug(`${fnName} - onSepEvent`, event)
         if (
           event.detail
@@ -481,7 +503,9 @@ function Marketsense (props) {
           && event.detail.payload
         ) {
           log.debug(`${fnName} - onSepEvent - search address changed`, event)
-          setMap(event.detail.payload.row.fields.id)
+          let address = await getAddressById(event.detail.payload.row.fields.id);
+          setMap(address)
+          drawMarker(address)
           // let addresses = getNearAddresses(event.detail.objectAddress.lat, event.detail.objectAddress.long)
         }
       }
@@ -534,7 +558,13 @@ function Marketsense (props) {
       drawHeatmap(
         myMap,
         {
-          radius: 25
+          radius: 25,
+          "gradient": {
+            "0.80": props.theme.palette.secondary.light,
+            "0.90": props.theme.palette.secondary.main,
+            "0.95": props.theme.palette.primary.light,
+            "1.0": props.theme.palette.primary.main
+          }
         })
       setMap(myMap)
     }

@@ -76,11 +76,26 @@ function App (props) {
       )
       log.debug(`${fnName} - getTheme - override`, { defaultTheme, parsedTheme, theme })
     } else {
-      theme = createMuiTheme(
-        defaultTheme
-      )
-      log.debug(`${fnName} - getTheme - no override`, { defaultTheme, theme })
+      theme = getDefaultTheme()
     }
+    return theme
+  }
+  const getDefaultTheme = () => {
+    const defaultTheme = {
+      "palette": {
+        "primary": {
+          "main": "#689F38"
+        },
+        "secondary": {
+          "main": "#0e72b5"
+        }
+      }
+    }
+    let theme = null
+    theme = createMuiTheme(
+      defaultTheme
+    )
+    log.debug(`${fnName} - getTheme - no override`, { defaultTheme, theme })
     return theme
   }
 
@@ -100,7 +115,7 @@ function App (props) {
     )
   }
   return (
-    <ThemeProvider theme={appProps.theme}>
+    <ThemeProvider theme={appProps.theme || getDefaultTheme()}>
       <div>
         {getComponent()}
       </div>
