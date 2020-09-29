@@ -16,18 +16,20 @@ import axios from 'axios'
 import PouchDB from 'pouchdb'
 import PouchDBFind from 'pouchdb-find'
 import ReactJson from 'react-json-view'
+import { useTranslation } from 'react-i18next'
 
 /** @jsx jsx */
 import { jsx } from '@emotion/core'
 import log from 'loglevel'
 
-import icon from 'leaflet/dist/images/marker-icon.png';
-import iconShadow from 'leaflet/dist/images/marker-shadow.png';
+import icon from 'leaflet/dist/images/marker-icon.png'
+import iconShadow from 'leaflet/dist/images/marker-shadow.png'
+
 let DefaultIcon = L.icon({
   iconUrl: icon,
   shadowUrl: iconShadow
-});
-L.Marker.prototype.options.icon = DefaultIcon;
+})
+L.Marker.prototype.options.icon = DefaultIcon
 
 const setupLogs = () => {
   if (process.env.REACT_APP_ENV === 'production') {
@@ -125,17 +127,34 @@ const useStyles = makeStyles({
   },
 })
 export default function SimpleCard (props) {
+  const fnName = 'SimpleCard'
   const classes = useStyles()
+  const { t, i18n } = useTranslation('open_marketsense', { useSuspense: false })
+  const gerProperties = (addressData) => {
+    log.debug(`${fnName} - gerProperties`, { addressData, props })
+    let rows = []
+    addressData.forEach((dataSet, dataSetIndex) => {
+      dataSet.data.forEach((data, dataIndex) => {
+        for (let prop in data) {
+          if (
+            data.hasOwnProperty(prop)
+            && prop !== 'id'
+          ) {
+            rows.push(<div key={`${dataSetIndex}_${dataIndex}_${prop}`}><b>{t(`open_marketsense:prop-${prop}`)}:</b> {data[prop]}</div>)
+          }
+        }
+      })
+    })
+    return <div>{rows}</div>
+  }
   return (
     <Card className={classes.root}>
       <CardContent>
         <Typography className={classes.title} color="textSecondary" gutterBottom>
           {props.object.address.street} {props.object.address.houseNumber}, {props.object.address.swissZipCode} {props.object.address.town}
         </Typography>
-        <Typography variant="body2" component="p">
-          <ReactJson
-            src={props.object.addressData}
-          />
+        <Typography variant="body2" component="div">
+          {gerProperties(props.object.addressData)}
         </Typography>
       </CardContent>
     </Card>
@@ -210,10 +229,11 @@ function ObjectDisplay (props) {
 function AddressSearch (props) {
   const fnName = 'AddressSearch'
   const [container, setContainer] = useState(null)
-
+  const { t, i18n } = useTranslation('open_marketsense', { useSuspense: false })
   const [isLoadingObjectAddress, setIsLoadingObjectAddress] = useState(false)
   const [objectAddress, setObjectAddress] = useState(null)
   const [objectAddressResults, setObjectAddressResults] = useState([])
+
   const onInputChange = async (e) => {
     let value = e.target.value
     if (value.length <= 2) return
@@ -231,9 +251,9 @@ function AddressSearch (props) {
           row: row
         }
       }).sort((a, b) => {
-        if(a.title < b.title) { return -1; }
-        if(a.title > b.title) { return 1; }
-        return 0;
+        if (a.title < b.title) { return -1 }
+        if (a.title > b.title) { return 1 }
+        return 0
       })
       setObjectAddressResults(newResults)
     } else {
@@ -291,6 +311,81 @@ function AddressSearch (props) {
   if (container) {
     return ReactDOM.createPortal((
       <div className={fnName}>
+        <div className={'lang-settings'}>
+          <Button
+            color="primary"
+            variant="outlined"
+            size="small"
+            onClick={() => {
+              i18n.changeLanguage('de-ch')
+            }}
+          >
+            DE
+          </Button>
+          <Button
+            color="primary"
+            variant="outlined"
+            size="small"
+            onClick={() => {
+              i18n.changeLanguage('it-ch')
+            }}
+          >
+            IT
+          </Button>
+          <Button
+            color="primary"
+            variant="outlined"
+            size="small"
+            onClick={() => {
+              i18n.changeLanguage('fr-ch')
+            }}
+          >
+            FR
+          </Button>
+          <Button
+            color="primary"
+            variant="outlined"
+            size="small"
+            onClick={() => {
+              let filterCountViewId = `open_marketsense_transaction_manager/filterCount`
+              let filterViewId = `open_marketsense_transaction_manager/filter`
+              props.setFilter({
+                filterViewId, filterCountViewId
+              })
+            }}
+          >
+            Transaction Manager
+            {t(`open_marketsense:filter-transaction-manager`)}
+          </Button>
+          <Button
+            color="primary"
+            variant="outlined"
+            size="small"
+            onClick={() => {
+              let filterCountViewId = `open_marketsense_gu_tu/filterCount`
+              let filterViewId = `open_marketsense_gu_tu/filter`
+              props.setFilter({
+                filterViewId, filterCountViewId
+              })
+            }}
+          >
+            {t(`open_marketsense:filter-gu-tu`)}
+          </Button>
+          <Button
+            color="primary"
+            variant="outlined"
+            size="small"
+            onClick={() => {
+              let filterCountViewId = `open_marketsense_private_investor/filterCount`
+              let filterViewId = `open_marketsense_private_investor/filter`
+              props.setFilter({
+                filterViewId, filterCountViewId
+              })
+            }}
+          >
+            {t(`open_marketsense:filter-private-investor`)}
+          </Button>
+        </div>
         <Autocomplete
           id="object-address-autocomplete"
           loading={isLoadingObjectAddress}
@@ -333,6 +428,7 @@ function AddressSearch (props) {
 
 function Marketsense (props) {
   const fnName = 'Marketsense'
+  const { t, i18n } = useTranslation('open_marketsense', { useSuspense: false })
   const [uuid, setUuid] = useState(null)
   const [container, setContainer] = useState(null)
   const [map, setMap] = useState(null)
@@ -383,12 +479,11 @@ function Marketsense (props) {
     myMap.on('click', onMapClick)
     return myMap
   }
+  const [filter, setFilter] = useState(null)
 
   const drawHeatmap = async function (map, options) {
-    let filterCountViewId = `open_marketsense_1/filterCount`
-    let filterViewId = `open_marketsense_1/filter`
     setIsLoadingOverview(true)
-    let docs = await getPotentialsFromCloudant(filterViewId, filterCountViewId)
+    let docs = await getPotentialsFromCloudant(filter.filterViewId, filter.filterCountViewId)
     log.debug(`${fnName} - drawHeatmap - docs`, { docs })
 
     let heatmapPoints = docs.map(doc => {
@@ -398,13 +493,15 @@ function Marketsense (props) {
     log.debug(`${fnName} - drawHeatmap`, { heatmapPoints })
     let myHeatLayer = L.heatLayer(heatmapPoints, options)
     log.debug(`${fnName} - myHeatLayer - [map]`, { myHeatLayer, heatmapPoints })
-    setHeatLayer((prevHeatLayer) => {
-      // remove the old heatmap layer
-      if (prevHeatLayer) {
-        map.removeLayer(prevHeatLayer)
-      }
+
+    if (heatLayer) {
+      map.removeLayer(heatLayer)
+    }
+
+    setHeatLayer(() => {
       myHeatLayer.addTo(map)
       setIsLoadingOverview(false)
+      return myHeatLayer;
     })
   }
 
@@ -475,23 +572,23 @@ function Marketsense (props) {
     if (props.parsedUrl && props.parsedUrl.sepEventName) {
       const getAddressById = async (addressId) => {
         let addressResponse = await getAddress(props, addressId)
-        let address = addressResponse.data[0];
-        return address;
+        let address = addressResponse.data[0]
+        return address
       }
       const setMap = async (address) => {
         let addressData = await getPublicMarketsenseData(props, address.id)
-        log.debug(`${fnName} - onSepEvent - search address changed - address`, {  addressData })
+        log.debug(`${fnName} - onSepEvent - search address changed - address`, { addressData })
         const defaultPosition = [address.lat, address.long]
         const defaultZoom = 21
         map.setView(defaultPosition, defaultZoom)
       }
       const drawMarker = async (address) => {
-        let marker = L.marker([address.lat, address.long]);
+        let marker = L.marker([address.lat, address.long])
         setSearchMarker((prevMarker) => {
-          if(prevMarker){
-            map.removeLayer(prevMarker);
+          if (prevMarker) {
+            map.removeLayer(prevMarker)
           }
-          marker.addTo(map);
+          marker.addTo(map)
           return marker
         })
       }
@@ -503,7 +600,7 @@ function Marketsense (props) {
           && event.detail.payload
         ) {
           log.debug(`${fnName} - onSepEvent - search address changed`, event)
-          let address = await getAddressById(event.detail.payload.row.fields.id);
+          let address = await getAddressById(event.detail.payload.row.fields.id)
           setMap(address)
           drawMarker(address)
           // let addresses = getNearAddresses(event.detail.objectAddress.lat, event.detail.objectAddress.long)
@@ -542,6 +639,10 @@ function Marketsense (props) {
       let uuid = uuidv4()
       setUuid(uuid)
 
+      let filterCountViewId = props.parsedUrl.filterCountViewId
+      let filterViewId = props.parsedUrl.filterViewId
+      setFilter({filterViewId, filterCountViewId})
+
       window.dispatchEvent(myEvent)
 
       return () => {
@@ -559,16 +660,33 @@ function Marketsense (props) {
         myMap,
         {
           radius: 25,
-          "gradient": {
-            "0.80": props.theme.palette.secondary.light,
-            "0.90": props.theme.palette.secondary.main,
-            "0.95": props.theme.palette.primary.light,
-            "1.0": props.theme.palette.primary.main
+          'gradient': {
+            '0.80': props.theme.palette.secondary.light,
+            '0.90': props.theme.palette.secondary.main,
+            '0.95': props.theme.palette.primary.light,
+            '1.0': props.theme.palette.primary.main
           }
         })
       setMap(myMap)
     }
   }, [uuid, container])
+
+  useEffect(() => {
+    log.debug(`${fnName} - useEffect - [filter]`, { process, props, uuid, container })
+    if (filter && map) {
+      drawHeatmap(
+        map,
+        {
+          radius: 25,
+          'gradient': {
+            '0.80': props.theme.palette.secondary.light,
+            '0.90': props.theme.palette.secondary.main,
+            '0.95': props.theme.palette.primary.light,
+            '1.0': props.theme.palette.primary.main
+          }
+        })
+    }
+  }, [filter])
 
   const renderMapPortal = () => {
     if (container) {
@@ -582,6 +700,7 @@ function Marketsense (props) {
               height: '100%',
             }}>
           </div>
+          {isLoadingOverview ? <LinearProgress/> : null}
         </React.Fragment>
       ), container)
     }
@@ -590,7 +709,7 @@ function Marketsense (props) {
   return (
     <React.Fragment>
       {renderMapPortal()}
-      <AddressSearch {...props}/>
+      <AddressSearch {...props} setFilter={setFilter}/>
       <ObjectDisplay {...props}/>
     </React.Fragment>
   )

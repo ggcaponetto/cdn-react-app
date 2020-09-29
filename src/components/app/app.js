@@ -11,6 +11,25 @@ import log from 'loglevel'
 import { win } from 'leaflet/src/core/Browser'
 import { get } from 'leaflet/src/dom/DomUtil'
 
+import i18next from 'i18next';
+import Backend from 'i18next-locize-backend';
+import {  initReactI18next } from "react-i18next";
+import { useTranslation } from 'react-i18next'
+
+i18next
+  .use(Backend)
+  .use(initReactI18next) // passes i18n down to react-i18next
+  .init({
+    // ...other options
+    lng: "de-CH",
+    fallbackLng: "de-CH",
+    backend: {
+      projectId: 'c016a769-684b-42fe-a8c2-880bff481672',
+      apiKey: 'd325343e-8fb0-42f0-b5cb-fde2968a4a3f',
+      referenceLng: 'de-CH'
+    }
+  });
+
 log.setLevel('debug')
 
 const script = document.currentScript
@@ -28,6 +47,7 @@ const getParsedUrl = () => {
 
 function App (props) {
   const fnName = 'App'
+  const { t, i18n } = useTranslation('main', { useSuspense: false })
   let [appProps, setAppProps] = useState({
     env: {
       APIGatewayBase: `https://services.swissenergyplanning.ch`
@@ -37,7 +57,7 @@ function App (props) {
   useEffect(() => {
     const url = new URL(script.src)
     const parsedUrl = getParsedUrl()
-    log.debug(`${fnName} - constructor`, { url, parsedUrl, appProps })
+    log.debug(`${fnName} - constructor`, { url, parsedUrl, appProps, t, i18n })
     setAppProps((appProps) => {
       return {
         ...appProps,
@@ -45,6 +65,9 @@ function App (props) {
         theme: getTheme(parsedUrl)
       }
     })
+    if(parsedUrl.lang){
+      i18n.changeLanguage(parsedUrl.lang)
+    }
     const myEvent = new CustomEvent(parsedUrl.sepEventName, {
       detail: {
         action: 'loaded-app',

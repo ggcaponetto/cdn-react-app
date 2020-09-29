@@ -40,6 +40,8 @@
     "@material-ui/lab": "^4.0.0-alpha.56",
     "axios": "^0.20.0",
     "babel-plugin-file-loader": "^2.0.0",
+    "i18next": "^19.7.0",
+    "i18next-locize-backend": "^4.1.8",
     "leaflet": "^1.7.1",
     "leaflet.heat": "^0.2.0",
     "lodash": "^4.17.20",
@@ -50,6 +52,7 @@
     "qs": "^6.9.4",
     "react": "^16.13.1",
     "react-dom": "^16.13.1",
+    "react-i18next": "^11.7.3",
     "react-json-view": "^1.19.1",
     "uuid": "^8.3.0"
   }

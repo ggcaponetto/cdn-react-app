@@ -32,6 +32,17 @@
         }
       }
     }))
+    let lang = "de-ch";
+
+    let filterCountViewId = `open_marketsense_private_investor/filterCount`
+    let filterViewId = `open_marketsense_private_investor/filter`
+
+    // let filterCountViewId = `open_marketsense_gu_tu/filterCount`
+    // let filterViewId = `open_marketsense_gu_tu/filter`
+
+    // let filterCountViewId = `open_marketsense_transaction_manager/filterCount`
+    // let filterViewId = `open_marketsense_transaction_manager/filter`
+
     window.addEventListener(sepEventName, (e) => {
       console.log('host: got event', { action: e.detail.action })
       if(e.detail.action === "loaded-marketsense"){
@@ -67,7 +78,13 @@
     })
     let script = document.getElementById('external-react-app')
     script.async = true
-    script.src = 'bundle.js?scriptId=sep-core&sepEventName=' + sepEventName + '&v=' + Date.now() + "&token=" + token + "&theme=" + theme
+    script.src = 'bundle.js?scriptId=sep-core&sepEventName=' + sepEventName
+      + '&v=' + Date.now()
+      + "&token=" + token
+      + "&theme=" + theme
+      + "&filterCountViewId=" + filterCountViewId
+      + "&filterViewId=" + filterViewId
+      + "&lang=" + lang
     script.addEventListener('load', function () {
       // the react app has rendered once
       console.log('external-react-app: script loaded')
