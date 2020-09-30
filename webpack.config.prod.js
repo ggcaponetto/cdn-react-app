@@ -1,5 +1,8 @@
 const webpack = require('webpack')
 const path = require('path')
+const LodashModuleReplacementPlugin = require("lodash-webpack-plugin");
+const MiniCssExtractPlugin = require('mini-css-extract-plugin');
+
 
 const NODE_ENV = process.env.NODE_ENV || "development";
 
@@ -59,7 +62,8 @@ module.exports = (env, argv) => {
     output: {
       path: path.resolve(__dirname, 'dist'),
       publicPath: '/',
-      filename: 'bundle.js'
+      filename: 'bundle.js?t=' + new Date().getTime(),
+      chunkFilename: '[name]-chunk.js?t=' + new Date().getTime(),
     },
     plugins: [
       new webpack.DefinePlugin({

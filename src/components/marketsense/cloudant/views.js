@@ -14,6 +14,8 @@ function filter_trans_manager(doc) {
 function filter_gutu(doc) {
   if (
     doc.isemptyparcel === true
+    && ( doc.parcelarea >= 500 )
+    && ( doc.parcelperimeter / (4 * Math.sqrt(doc.parcelarea)) < 1.5 )
   ) {
     emit('c', doc.lat + ',' + doc.long)
   }

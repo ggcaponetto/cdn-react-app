@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useContext, useReducer, useRef } from 'react'
+import React, { useEffect, useState} from 'react'
 import styles from './hello.module.css'
 /** @jsx jsx */
 import { jsx } from '@emotion/core'
@@ -22,15 +22,13 @@ const setupLogs = () => {
   }
 }
 
-function Hello (props) {
+export default function Hello (props) {
   const fnName = 'Hello'
   const [result, setResult] = useState(null)
   useEffect(() => {
     setupLogs()
     log.debug(`${fnName} - useEffect`, { props, styles, process })
-    props.sepEvents.dispatch(props.sepEvents.dispatch(props.sepEvents.name, { message: 'loaded hello.js' }))
     import('./hello-split.js').then(math => {
-      props.sepEvents.dispatch(props.sepEvents.dispatch(props.sepEvents.name, { message: 'loaded hello-split.js' }))
       let result = math.add(16, 26)
       log.debug('dynamic import of hello-split.js has completed.', { result })
       setResult(result)
@@ -46,7 +44,6 @@ function Hello (props) {
         variant="contained"
         color="primary"
         onClick={() => {
-          props.sepEvents.dispatch(props.sepEvents.dispatch(props.sepEvents.name, { click: { loaded: true } }))
         }}
       >
         Primary
@@ -54,9 +51,5 @@ function Hello (props) {
       <h3>Hello world!! {(new moment()).toISOString()} - (hello-split.js: {result})</h3>
     </div>
   )
-}
-
-export {
-  Hello
 }
 

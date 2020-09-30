@@ -2,14 +2,18 @@ import React, { useEffect, useState } from 'react'
 import ReactDOM from 'react-dom'
 import qs from 'qs'
 import '@material-ui/core'
-import { Marketsense } from '../marketsense/marketsense.js'
-import { createMuiTheme, makeStyles, ThemeProvider } from '@material-ui/core/styles'
+// import { Marketsense } from '../marketsense/marketsense.js'
+import { createMuiTheme, ThemeProvider } from '@material-ui/core/styles'
+import { LinearProgress } from '@material-ui/core'
+
+const Marketsense = React.lazy(() => import( './../marketsense/marketsense'))
+// const Hello = React.lazy(() => import( './../hello/hello'))
 
 import log from 'loglevel'
 
-import i18next from 'i18next';
-import Backend from 'i18next-locize-backend';
-import {  initReactI18next } from "react-i18next";
+import i18next from 'i18next'
+import Backend from 'i18next-locize-backend'
+import { initReactI18next } from 'react-i18next'
 import { useTranslation } from 'react-i18next'
 
 i18next
@@ -17,14 +21,14 @@ i18next
   .use(initReactI18next) // passes i18n down to react-i18next
   .init({
     // ...other options
-    lng: "de-CH",
-    fallbackLng: "de-CH",
+    lng: 'de-CH',
+    fallbackLng: 'de-CH',
     backend: {
       projectId: 'c016a769-684b-42fe-a8c2-880bff481672',
       apiKey: 'd325343e-8fb0-42f0-b5cb-fde2968a4a3f',
       referenceLng: 'de-CH'
     }
-  });
+  })
 
 log.setLevel('debug')
 
@@ -61,7 +65,7 @@ function App (props) {
         theme: getTheme(parsedUrl)
       }
     })
-    if(parsedUrl.lang){
+    if (parsedUrl.lang) {
       i18n.changeLanguage(parsedUrl.lang)
     }
     const myEvent = new CustomEvent(parsedUrl.sepEventName, {
@@ -75,12 +79,12 @@ function App (props) {
 
   const getTheme = (parsedUrl) => {
     const defaultTheme = {
-      "palette": {
-        "primary": {
-          "main": "#689F38"
+      'palette': {
+        'primary': {
+          'main': '#689F38'
         },
-        "secondary": {
-          "main": "#0e72b5"
+        'secondary': {
+          'main': '#0e72b5'
         }
       }
     }
@@ -101,12 +105,12 @@ function App (props) {
   }
   const getDefaultTheme = () => {
     const defaultTheme = {
-      "palette": {
-        "primary": {
-          "main": "#689F38"
+      'palette': {
+        'primary': {
+          'main': '#689F38'
         },
-        "secondary": {
-          "main": "#0e72b5"
+        'secondary': {
+          'main': '#0e72b5'
         }
       }
     }
@@ -120,18 +124,28 @@ function App (props) {
 
   const getComponent = () => {
     if (appProps) {
+      let getLoadingComponent = () => {
+        return (
+          <div>
+            <h1>Loading Map...</h1>
+            <LinearProgress />
+          </div>
+        )
+      }
       return (
         <React.Fragment>
-          {/* <Hello {...appProps}></Hello>*/}
-          <Marketsense {...appProps}/>
+          <React.Suspense fallback={getLoadingComponent()}>
+            <Marketsense {...appProps}/>
+          </React.Suspense>
+        </React.Fragment>
+      )
+    } else {
+      return (
+        <React.Fragment>
+          <h3>loading...</h3>
         </React.Fragment>
       )
     }
-    return (
-      <React.Fragment>
-        <h3>Loading...</h3>
-      </React.Fragment>
-    )
   }
   return (
     <ThemeProvider theme={appProps.theme || getDefaultTheme()}>
@@ -143,7 +157,10 @@ function App (props) {
 }
 
 if (module.hot) {
-  module.hot.accept('../hello/hello', function () {
+  module.hot.accept([
+    "../hello/hello",
+    "../marketsense/marketsense"
+  ], function () {
     log.trace('Accepting the updated hello.js module!')
     ReactDOM.render(
       <App/>,
