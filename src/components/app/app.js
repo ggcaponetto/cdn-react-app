@@ -2,14 +2,10 @@ import React, { useEffect, useState } from 'react'
 import ReactDOM from 'react-dom'
 import qs from 'qs'
 import '@material-ui/core'
-import { Hello } from '../hello/hello.js'
 import { Marketsense } from '../marketsense/marketsense.js'
-import Button from '@material-ui/core/Button'
 import { createMuiTheme, makeStyles, ThemeProvider } from '@material-ui/core/styles'
 
 import log from 'loglevel'
-import { win } from 'leaflet/src/core/Browser'
-import { get } from 'leaflet/src/dom/DomUtil'
 
 import i18next from 'i18next';
 import Backend from 'i18next-locize-backend';

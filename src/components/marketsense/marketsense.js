@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useContext, useReducer, useRef, useCallback } from 'react'
+import React, { useEffect, useState} from 'react'
 import ReactDOM from 'react-dom'
 import * as L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
@@ -7,15 +7,13 @@ import { v4 as uuidv4 } from 'uuid'
 import { Button, TextField, CircularProgress, LinearProgress } from '@material-ui/core'
 import { makeStyles } from '@material-ui/core/styles'
 import Card from '@material-ui/core/Card'
-import CardActions from '@material-ui/core/CardActions'
 import CardContent from '@material-ui/core/CardContent'
 import Typography from '@material-ui/core/Typography'
 import Autocomplete from '@material-ui/lab/Autocomplete'
-import _ from 'lodash'
+import { debounce } from 'lodash'
 import axios from 'axios'
 import PouchDB from 'pouchdb'
-import PouchDBFind from 'pouchdb-find'
-import ReactJson from 'react-json-view'
+// import PouchDBFind from 'pouchdb-find'
 import { useTranslation } from 'react-i18next'
 
 /** @jsx jsx */
@@ -414,7 +412,7 @@ function AddressSearch (props) {
               onChange={(e) => {
                 e.persist()
                 console.log('onChange', { e })
-                let debounced = _.debounce(onInputChange, 300, { leading: true })
+                let debounced = debounce(onInputChange, 300, { leading: true })
                 debounced(e)
               }}
             />
