@@ -63,7 +63,7 @@ module.exports = (env, argv) => {
       path: path.resolve(__dirname, 'dist'),
       publicPath: '/',
       filename: 'bundle.js?t=' + new Date().getTime(),
-      chunkFilename: '[name]-chunk.js?t=' + new Date().getTime(),
+      chunkFilename: '[name].bundle.js?t=' + new Date().getTime(),
     },
     plugins: [
       new webpack.DefinePlugin({
