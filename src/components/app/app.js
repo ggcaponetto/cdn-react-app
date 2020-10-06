@@ -6,7 +6,8 @@ import '@material-ui/core'
 import { createMuiTheme, ThemeProvider } from '@material-ui/core/styles'
 import { LinearProgress } from '@material-ui/core'
 
-const Marketsense = React.lazy(() => import( './../marketsense/marketsense'))
+// const Marketsense = React.lazy(() => import( './../marketsense/marketsense'))
+import Marketsense from '../marketsense/marketsense'
 // const Hello = React.lazy(() => import( './../hello/hello'))
 
 import log from 'loglevel'
