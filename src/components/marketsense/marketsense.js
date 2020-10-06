@@ -134,15 +134,37 @@ function SimpleCard (props) {
   const gerProperties = (addressData) => {
     log.debug(`${fnName} - gerProperties`, { addressData, props })
     let rows = []
+    let allowedPros = [
+      'addresspoint-by-addressid-gebKategorie', // Gebäudekategorie
+      'addresspoint-by-addressid-baujahrStart', // Baujahr
+      'addresspoint-by-addressid-baujahrInt', // Baujahr
+      'addresspoint-by-addressid-baujahrEnde', // Baujahr
+      'addresspoint-by-addressid-renovationsjahrStart', // Renovationsjahr
+      'addresspoint-by-addressid-renovationsjahrInt', // Renovationsjahr
+      'addresspoint-by-addressid-renovationsjahrEnde', // Renovationsjahr
+      'parcelbuildfeatures-by-addressid-volumeParcelBuild', // Gebäudevolumen auf Parzelle [m3]
+      "addresspoints-statistics-by-parcel-by-addressid-anzahlWohnungen", // Anzahl Wohnungen pro Parzelle
+      "addresspoint-by-addressid-baumassenzifferParzelle", // Baumassenziffer Parzelle
+      "parcelfeatures-by-addressid-id", // Parzelle Nr.
+      "addresspoint-by-addressid-parcelArea", // Parzellenfläche [m2]
+      "addresspoint-by-addressid-renovationPressure", // Renovationsdruck
+      "addresspoint-by-addressid-districtType", // Gemeindetypologie
+      "addresspoint-by-addressid-publicTransportQuality", // ÖV-Güteklasse
+      "districtfeatures-by-addressid-wohnungsleerstandProzent", // Wohnungsleerstand Gemeinde [%]
+      "addresspoint-by-addressid-population", // Bevölkerung Gemeinde [Personen]
+      "addresspoint-by-addressid-populationGrowth", // Bevölkerungswachstum Gemeinde [%]
+      "addresspoint-by-addressid-populationHectar", // Bevölkerungsdichte [Personen/ha]
+    ]
     addressData.forEach((dataSet, dataSetIndex) => {
       dataSet.data.forEach((data, dataIndex) => {
+        let endpointPrefix = dataSet.config.url.replace("https://services.swissenergyplanning.ch/api/marketsense/", "").split("/")[0];
         for (let prop in data) {
           if (
             data.hasOwnProperty(prop)
-            && prop !== 'id'
+            && allowedPros.includes(`${endpointPrefix}-${prop}`)
           ) {
             rows.push(<div key={`${dataSetIndex}_${dataIndex}_${prop}`}>
-              <b>{t(`open_marketsense:prop-${prop}`)}:</b> {data[prop]}</div>)
+              <b>{t(`open_marketsense:${endpointPrefix}-${prop}`)}:</b> {data[prop]}</div>)
           }
         }
       })
