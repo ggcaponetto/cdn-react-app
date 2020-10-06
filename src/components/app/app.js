@@ -5,6 +5,8 @@ import '@material-ui/core'
 // import { Marketsense } from '../marketsense/marketsense.js'
 import { createMuiTheme, ThemeProvider } from '@material-ui/core/styles'
 import { LinearProgress } from '@material-ui/core'
+import {Helmet} from "react-helmet";
+
 
 // const Marketsense = React.lazy(() => import( './../marketsense/marketsense'))
 
@@ -133,7 +135,6 @@ function App (props) {
       let getLoadingComponent = () => {
         return (
           <div>
-            <h1>Loading Map...</h1>
             <LinearProgress />
           </div>
         )
@@ -155,6 +156,9 @@ function App (props) {
   }
   return (
     <ThemeProvider theme={appProps.theme || getDefaultTheme()}>
+      <Helmet>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700&display=swap" />
+      </Helmet>
       <div>
         {getComponent()}
       </div>
