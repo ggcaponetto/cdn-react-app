@@ -229,7 +229,7 @@ function ObjectDisplay (props) {
     return ReactDOM.createPortal((
       <div className={fnName}>
         {(() => {
-          if(props.isLoadingAddressData){
+          if (props.isLoadingAddressData) {
             return <LinearProgress/>
           }
           if (object) {
@@ -250,10 +250,9 @@ function AddressSearch (props) {
   const [objectAddress, setObjectAddress] = useState(null)
   const [objectAddressResults, setObjectAddressResults] = useState([])
 
-  const onInputChange = async (e) => {
-    let value = e.target.value
+  const onInputChange = async (value) => {
     if (value.length <= 2) return
-    console.log(value)
+    log.log(value)
     // set the spinner
     setIsLoadingObjectAddress(true)
     let response = await getAddresses(props, value)
@@ -326,106 +325,137 @@ function AddressSearch (props) {
 
   if (container) {
     return ReactDOM.createPortal((
-      <div className={fnName}>
-        <div className={'lang-settings'} style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center'
-        }}>
-          <Button
-            color="primary"
-            variant="outlined"
-            size="small"
-            onClick={() => {
-              i18n.changeLanguage('de-ch')
-            }}
-          >
-            DE
-          </Button>
-          <Button
-            color="primary"
-            variant="outlined"
-            size="small"
-            onClick={() => {
-              i18n.changeLanguage('it-ch')
-            }}
-          >
-            IT
-          </Button>
-          <Button
-            color="primary"
-            variant="outlined"
-            size="small"
-            onClick={() => {
-              i18n.changeLanguage('fr-ch')
-            }}
-          >
-            FR
-          </Button>
-          <Button
-            color="primary"
-            variant="outlined"
-            size="small"
-            onClick={() => {
-              i18n.changeLanguage('en')
-            }}
-          >
-            EN
-          </Button>
-          <Button
-            color="primary"
-            variant="outlined"
-            size="small"
-            onClick={() => {
-              let filterCountViewId = `open_marketsense_transaction_manager/filterCount`
-              let filterViewId = `open_marketsense_transaction_manager/filter`
-              props.setFilter({
-                filterViewId, filterCountViewId
-              })
-            }}
-          >
-            {t(`open_marketsense:filter-transaction-manager`)}
-          </Button>
-          <Button
-            color="primary"
-            variant="outlined"
-            size="small"
-            onClick={() => {
-              let filterCountViewId = `open_marketsense_gu_tu/filterCount`
-              let filterViewId = `open_marketsense_gu_tu/filter`
-              props.setFilter({
-                filterViewId, filterCountViewId
-              })
-            }}
-          >
-            {t(`open_marketsense:filter-gu-tu`)}
-          </Button>
-          <Button
-            color="primary"
-            variant="outlined"
-            size="small"
-            onClick={() => {
-              let filterCountViewId = `open_marketsense_private_investor/filterCount`
-              let filterViewId = `open_marketsense_private_investor/filter`
-              props.setFilter({
-                filterViewId, filterCountViewId
-              })
-            }}
-          >
-            {t(`open_marketsense:filter-private-investor`)}
-          </Button>
-        </div>
+      <div
+        className={fnName}
+        style={{
+          background: 'white'
+        }}
+      >
+        {props.parsedUrl.controls === 'true' ?
+          (
+            <div className={'controls'} style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}>
+              <Button
+                color="primary"
+                variant="outlined"
+                size="small"
+                onClick={() => {
+                  i18n.changeLanguage('de-ch')
+                }}
+              >
+                DE
+              </Button>
+              <Button
+                color="primary"
+                variant="outlined"
+                size="small"
+                onClick={() => {
+                  i18n.changeLanguage('it-ch')
+                }}
+              >
+                IT
+              </Button>
+              <Button
+                color="primary"
+                variant="outlined"
+                size="small"
+                onClick={() => {
+                  i18n.changeLanguage('fr-ch')
+                }}
+              >
+                FR
+              </Button>
+              <Button
+                color="primary"
+                variant="outlined"
+                size="small"
+                onClick={() => {
+                  i18n.changeLanguage('en')
+                }}
+              >
+                EN
+              </Button>
+              <Button
+                color="primary"
+                variant="outlined"
+                size="small"
+                onClick={() => {
+                  let filterCountViewId = `open_marketsense_transaction_manager/filterCount`
+                  let filterViewId = `open_marketsense_transaction_manager/filter`
+                  props.setFilter({
+                    filterViewId, filterCountViewId
+                  })
+                }}
+              >
+                {t(`open_marketsense:filter-transaction-manager`)}
+              </Button>
+              <Button
+                color="primary"
+                variant="outlined"
+                size="small"
+                onClick={() => {
+                  let filterCountViewId = `open_marketsense_gu_tu/filterCount`
+                  let filterViewId = `open_marketsense_gu_tu/filter`
+                  props.setFilter({
+                    filterViewId, filterCountViewId
+                  })
+                }}
+              >
+                {t(`open_marketsense:filter-gu-tu`)}
+              </Button>
+              <Button
+                color="primary"
+                variant="outlined"
+                size="small"
+                onClick={() => {
+                  let filterCountViewId = `open_marketsense_private_investor/filterCount`
+                  let filterViewId = `open_marketsense_private_investor/filter`
+                  props.setFilter({
+                    filterViewId, filterCountViewId
+                  })
+                }}
+              >
+                {t(`open_marketsense:filter-private-investor`)}
+              </Button>
+            </div>
+          )
+          : null
+        }
         <Autocomplete
           id="object-address-autocomplete"
           loading={isLoadingObjectAddress}
+          autoComplete
+          autoSelect
           fullWidth
           options={objectAddressResults}
           getOptionLabel={(option) => option.title}
-          onChange={(e) => {
-            e.persist()
-            console.log('autocomplete - onChange', { e })
-            let address = objectAddressResults.filter((option, index) => index === parseInt(e.target.dataset.optionIndex))[0]
-            setObjectAddress(address)
+          value={objectAddressResults.filter((option, index) => option.title === objectAddress && objectAddress.title)[0]}
+          getOptionSelected={(option, value) => {
+            log.log('autocomplete - getOptionSelected', { option, value })
+            return option.title === value.title
+          }}
+          onChange={(event, value) => {
+            event.persist()
+            log.log('autocomplete - onChange', { event, objectAddressResults })
+            let address = objectAddressResults.filter((option, index) => index === parseInt(event.target.dataset.optionIndex))[0]
+            if (address) {
+              log.log('autocomplete - onChange - address', { address, objectAddress })
+              setObjectAddress(address)
+            }
+          }}
+          onInputChange={(event, value) => {
+            log.log('onInputChange', { event, value })
+            let debounced = debounce(onInputChange, 300, { leading: true })
+            debounced(value);
+
+            let address = objectAddressResults.filter((option, index) => option.title === value)[0]
+            log.log('autocomplete - onInputChange - address', { objectAddressResults, value })
+            if (address) {
+              setObjectAddress(address)
+            }
           }}
           renderInput={(params) => (
             <TextField
@@ -440,12 +470,6 @@ function AddressSearch (props) {
                 ),
               }}
               variant="outlined"
-              onChange={(e) => {
-                e.persist()
-                console.log('onChange', { e })
-                let debounced = debounce(onInputChange, 300, { leading: true })
-                debounced(e)
-              }}
             />
           )}
         />
@@ -464,11 +488,11 @@ export default function Marketsense (props) {
   const [heatLayer, setHeatLayer] = useState(null)
   const [searchMarker, setSearchMarker] = useState(null)
   const [isLoadingOverview, setIsLoadingOverview] = useState(false)
-  const [isLoadingAddressData, setIsLoadingAddressData] = useState(false);
+  const [isLoadingAddressData, setIsLoadingAddressData] = useState(false)
 
   async function onMapClick (e) {
     log.debug('clicked on map', e)
-    setIsLoadingAddressData(true);
+    setIsLoadingAddressData(true)
     let nearestAddresses = await getNearAddresses(props, e.latlng.lat, e.latlng.lng)
     // let addressResponse = await getAddress(props, addressId)
     let address = nearestAddresses.data[0]
@@ -487,7 +511,7 @@ export default function Marketsense (props) {
       })
       window.dispatchEvent(myEvent)
     }
-    setIsLoadingAddressData(false);
+    setIsLoadingAddressData(false)
     log.debug(`${fnName} - onSepEvent - search address changed - address`, { nearestAddresses, e })
   }
 

@@ -33,6 +33,7 @@
       }
     }))
     let lang = "de-ch";
+    let controls = "true";
 
     let filterCountViewId = `open_marketsense_private_investor/filterCount`
     let filterViewId = `open_marketsense_private_investor/filter`
@@ -87,6 +88,7 @@
       + "&filterCountViewId=" + filterCountViewId
       + "&filterViewId=" + filterViewId
       + "&lang=" + lang
+      + "&controls=" + controls
 
     mainScript.addEventListener('load', function () {
       // the react app has rendered once
