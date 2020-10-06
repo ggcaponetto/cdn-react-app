@@ -76,20 +76,22 @@
         }))
       }
     })
-    let script = document.getElementById('external-react-app')
-    script.async = true
-    script.src = 'main.bundle.js?scriptId=sep-core&sepEventName=' + sepEventName
+    let mainScript = document.getElementById('external-react-app')
+    mainScript.async = true
+    mainScript.src = 'main.bundle.js?'
+      + 'scriptId=sep-core'
+      + '&sepEventName=' + sepEventName
       + '&v=' + Date.now()
       + "&token=" + token
       + "&theme=" + theme
       + "&filterCountViewId=" + filterCountViewId
       + "&filterViewId=" + filterViewId
       + "&lang=" + lang
-    script.addEventListener('load', function () {
+
+    mainScript.addEventListener('load', function () {
       // the react app has rendered once
       console.log('external-react-app: script loaded')
     })
-
   }
 </script>
 <!--COPY THIS SNIPPET HERE - END -->

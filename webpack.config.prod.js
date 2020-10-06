@@ -9,13 +9,13 @@ const NODE_ENV = process.env.NODE_ENV || "development";
 module.exports = (env, argv) => {
   console.log('applying webpack config: ', {env, argv, NODE_ENV});
   let config = {
-    entry: './src/index.js',
-    devtool: 'inline-source-map',
+    entry: './src/entry.js',
+    devtool: false,
     module: {
       rules: [
         {
           test: /\.(js|jsx)$/,
-          exclude: /node_modules/,
+          exclude: /(node_modules|bower_components)/,
           use: ['babel-loader']
         },
         {
@@ -54,16 +54,18 @@ module.exports = (env, argv) => {
     mode: NODE_ENV,
     optimization: {
       minimize: NODE_ENV === "production",
-      nodeEnv: NODE_ENV
+      nodeEnv: NODE_ENV,
+      namedModules: true,
+      namedChunks: true
     },
     resolve: {
       extensions: ['*', '.js', '.jsx']
     },
     output: {
       path: path.resolve(__dirname, 'dist'),
+      // publicPath: 'https://geoimpactstorage.blob.core.windows.net/open-marketsense/1.0.0/',
       publicPath: '/',
-      filename: 'main.bundle.js?t=' + new Date().getTime(),
-      chunkFilename: '[name].bundle.js?t=' + new Date().getTime(),
+      filename: '[name].bundle.js'
     },
     plugins: [
       new webpack.DefinePlugin({

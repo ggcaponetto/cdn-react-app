@@ -6,13 +6,13 @@ const NODE_ENV = process.env.NODE_ENV || 'development'
 module.exports = (env, argv) => {
   console.log('applying webpack config: ', { env, argv })
   let config = {
-    entry: './src/index.js',
+    entry: './src/entry.js',
     devtool: 'inline-source-map',
     module: {
       rules: [
         {
           test: /\.(js|jsx)$/,
-          exclude: /node_modules/,
+          exclude: /(node_modules|bower_components)/,
           use: ['babel-loader']
         },
         {
@@ -52,15 +52,17 @@ module.exports = (env, argv) => {
     mode: NODE_ENV,
     optimization: {
       minimize: NODE_ENV === 'production',
-      nodeEnv: NODE_ENV
+      nodeEnv: NODE_ENV,
+      namedModules: true,
+      namedChunks: true
     },
     resolve: {
       extensions: ['*', '.js', '.jsx']
     },
     output: {
-      path: path.resolve(__dirname, 'public'),
+      path: path.resolve(__dirname, 'dist'),
       publicPath: '/',
-      filename: 'bundle.js'
+      filename: '[name].bundle.js'
     },
     plugins: [
       new webpack.HotModuleReplacementPlugin(),
