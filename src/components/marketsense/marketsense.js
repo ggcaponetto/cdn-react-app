@@ -131,11 +131,23 @@ function SimpleCard (props) {
   const fnName = 'SimpleCard'
   const classes = useStyles()
   const { t, i18n } = useTranslation('open_marketsense', { useSuspense: true })
+  const getPropValue = (locizeKey, value) => {
+    if (locizeKey === 'addresspoint-by-addressid-gebKategorieShort') {
+      return t(`open_marketsense:${locizeKey}-${value}`)
+    } else if (locizeKey === 'districtfeatures-by-addressid-districtType') {
+      return t(`open_marketsense:${locizeKey}-${value}`)
+    } else if (locizeKey === 'addresspoint-by-addressid-publicTransportQuality') {
+      return t(`open_marketsense:${locizeKey}-${value}`)
+    } else {
+      return value
+    }
+  }
   const gerProperties = (addressData) => {
     log.debug(`${fnName} - gerProperties`, { addressData, props })
     let rows = []
     let allowedPros = [
-      'addresspoint-by-addressid-gebKategorie', // Gebäudekategorie
+      // 'addresspoint-by-addressid-gebKategorie', // Gebäudekategorie
+      'addresspoint-by-addressid-gebKategorieShort',
       'addresspoint-by-addressid-baujahrStart', // Baujahr
       'addresspoint-by-addressid-baujahrInt', // Baujahr
       'addresspoint-by-addressid-baujahrEnde', // Baujahr
@@ -143,28 +155,29 @@ function SimpleCard (props) {
       'addresspoint-by-addressid-renovationsjahrInt', // Renovationsjahr
       'addresspoint-by-addressid-renovationsjahrEnde', // Renovationsjahr
       'parcelbuildfeatures-by-addressid-volumeParcelBuild', // Gebäudevolumen auf Parzelle [m3]
-      "addresspoints-statistics-by-parcel-by-addressid-anzahlWohnungen", // Anzahl Wohnungen pro Parzelle
-      "addresspoint-by-addressid-baumassenzifferParzelle", // Baumassenziffer Parzelle
-      "parcelfeatures-by-addressid-id", // Parzelle Nr.
-      "addresspoint-by-addressid-parcelArea", // Parzellenfläche [m2]
-      "addresspoint-by-addressid-renovationPressure", // Renovationsdruck
-      "addresspoint-by-addressid-districtType", // Gemeindetypologie
-      "addresspoint-by-addressid-publicTransportQuality", // ÖV-Güteklasse
-      "districtfeatures-by-addressid-wohnungsleerstandProzent", // Wohnungsleerstand Gemeinde [%]
-      "addresspoint-by-addressid-population", // Bevölkerung Gemeinde [Personen]
-      "addresspoint-by-addressid-populationGrowth", // Bevölkerungswachstum Gemeinde [%]
-      "addresspoint-by-addressid-populationHectar", // Bevölkerungsdichte [Personen/ha]
+      'addresspoints-statistics-by-parcel-by-addressid-anzahlWohnungen', // Anzahl Wohnungen pro Parzelle
+      'addresspoint-by-addressid-baumassenzifferParzelle', // Baumassenziffer Parzelle
+      'parcelfeatures-by-addressid-id', // Parzelle Nr.
+      'addresspoint-by-addressid-parcelArea', // Parzellenfläche [m2]
+      'addresspoint-by-addressid-renovationPressure', // Renovationsdruck
+      'districtfeatures-by-addressid-districtType', // Gemeindetypologie
+      'addresspoint-by-addressid-publicTransportQuality', // ÖV-Güteklasse
+      'districtfeatures-by-addressid-wohnungsleerstandProzent', // Wohnungsleerstand Gemeinde [%]
+      'addresspoint-by-addressid-population', // Bevölkerung Gemeinde [Personen]
+      'addresspoint-by-addressid-populationGrowth', // Bevölkerungswachstum Gemeinde [%]
+      'addresspoint-by-addressid-populationHectar', // Bevölkerungsdichte [Personen/ha]
     ]
     addressData.forEach((dataSet, dataSetIndex) => {
       dataSet.data.forEach((data, dataIndex) => {
-        let endpointPrefix = dataSet.config.url.replace("https://services.swissenergyplanning.ch/api/marketsense/", "").split("/")[0];
+        let endpointPrefix = dataSet.config.url.replace('https://services.swissenergyplanning.ch/api/marketsense/', '').split('/')[0]
         for (let prop in data) {
           if (
             data.hasOwnProperty(prop)
             && allowedPros.includes(`${endpointPrefix}-${prop}`)
           ) {
             rows.push(<div key={`${dataSetIndex}_${dataIndex}_${prop}`}>
-              <b>{t(`open_marketsense:${endpointPrefix}-${prop}`)}:</b> {data[prop]}</div>)
+              <b>{t(`open_marketsense:${endpointPrefix}-${prop}`)}:</b> {getPropValue(`${endpointPrefix}-${prop}`, data[prop])}
+            </div>)
           }
         }
       })
@@ -471,7 +484,7 @@ function AddressSearch (props) {
           onInputChange={(event, value) => {
             log.log('onInputChange', { event, value })
             let debounced = debounce(onInputChange, 300, { leading: true })
-            debounced(value);
+            debounced(value)
 
             let address = objectAddressResults.filter((option, index) => option.title === value)[0]
             log.log('autocomplete - onInputChange - address', { objectAddressResults, value })
