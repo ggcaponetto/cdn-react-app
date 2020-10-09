@@ -1,13 +1,12 @@
 import React, { useEffect, useState} from 'react'
-import styles from './hello.module.css'
-/** @jsx jsx */
+import styles from './sample.module.css'
 import { jsx } from '@emotion/core'
+/** @jsx jsx */
 import moment from 'moment'
 import log from 'loglevel'
-import Button from '@material-ui/core/Button'
-
+import { Button } from '@material-ui/core'
 // this is bad, messes up the host css
-// DONT: import "./hello-global.css"
+// DONT: import "./sample-global.css"
 
 log.setLevel('debug')
 
@@ -22,15 +21,15 @@ const setupLogs = () => {
   }
 }
 
-export default function Hello (props) {
-  const fnName = 'Hello'
+export default function Sample (props) {
+  const fnName = 'Sample'
   const [result, setResult] = useState(null)
   useEffect(() => {
     setupLogs()
     log.debug(`${fnName} - useEffect`, { props, styles, process })
-    import('./hello-split.js').then(math => {
+    import('./sample-split.js').then(math => {
       let result = math.add(16, 26)
-      log.debug('dynamic import of hello-split.js has completed.', { result })
+      log.debug('dynamic import of sample-split.js has completed.', { result })
       setResult(result)
     })
   }, [])
@@ -48,7 +47,7 @@ export default function Hello (props) {
       >
         Primary
       </Button>
-      <h3>Hello world!! {(new moment()).toISOString()} - (hello-split.js: {result})</h3>
+      <h3>hello world!! {(new moment()).toISOString()} - (sample-split.js: {result})</h3>
     </div>
   )
 }

@@ -2,41 +2,16 @@ import React, { useEffect, useState } from 'react'
 import ReactDOM from 'react-dom'
 import qs from 'qs'
 import '@material-ui/core'
-// import { Marketsense } from '../marketsense/marketsense.js'
 import { createMuiTheme, ThemeProvider } from '@material-ui/core/styles'
 import { LinearProgress } from '@material-ui/core'
 import {Helmet} from "react-helmet";
 
 
-// const Marketsense = React.lazy(() => import( './../marketsense/marketsense'))
-
-const Marketsense = React.lazy(() => {
-  return import(/* webpackChunkName: "marketsense" */ './../marketsense/marketsense.js');
+const Sample = React.lazy(() => {
+  return import(/* webpackChunkName: "sample" */ './../sample/sample.js');
 })
 
-// import Marketsense from '../marketsense/marketsense'
-// const Hello = React.lazy(() => import( './../hello/hello'))
-
 import log from 'loglevel'
-
-import i18next from 'i18next'
-import Backend from 'i18next-locize-backend'
-import { initReactI18next } from 'react-i18next'
-import { useTranslation } from 'react-i18next'
-
-i18next
-  .use(Backend)
-  .use(initReactI18next) // passes i18n down to react-i18next
-  .init({
-    // ...other options
-    lng: 'de-CH',
-    fallbackLng: 'de-CH',
-    backend: {
-      projectId: 'c016a769-684b-42fe-a8c2-880bff481672',
-      apiKey: 'd325343e-8fb0-42f0-b5cb-fde2968a4a3f',
-      referenceLng: 'de-CH'
-    }
-  })
 
 log.setLevel('debug')
 
@@ -55,7 +30,6 @@ const getParsedUrl = () => {
 
 function App (props) {
   const fnName = 'App'
-  const { t, i18n } = useTranslation('main', { useSuspense: false })
   let [appProps, setAppProps] = useState({
     env: {
       APIGatewayBase: `https://services.swissenergyplanning.ch`
@@ -65,7 +39,7 @@ function App (props) {
   useEffect(() => {
     const url = new URL(script.src)
     const parsedUrl = getParsedUrl()
-    log.debug(`${fnName} - constructor`, { url, parsedUrl, appProps, t, i18n })
+    log.debug(`${fnName} - constructor`, { url, parsedUrl, appProps})
     setAppProps((appProps) => {
       return {
         ...appProps,
@@ -73,9 +47,6 @@ function App (props) {
         theme: getTheme(parsedUrl)
       }
     })
-    if (parsedUrl.lang) {
-      i18n.changeLanguage(parsedUrl.lang)
-    }
     const myEvent = new CustomEvent(parsedUrl.sepEventName, {
       detail: {
         action: 'loaded-app',
@@ -142,7 +113,7 @@ function App (props) {
       return (
         <React.Fragment>
           <React.Suspense fallback={getLoadingComponent()}>
-            <Marketsense {...appProps}/>
+            <Sample {...appProps}/>
           </React.Suspense>
         </React.Fragment>
       )
@@ -168,10 +139,9 @@ function App (props) {
 
 if (module.hot) {
   module.hot.accept([
-    "../hello/hello",
-    "../marketsense/marketsense"
+    "../sample/sample"
   ], function () {
-    log.trace('Accepting the updated hello.js module!')
+    log.trace('Accepting the updated sample.js module!')
     ReactDOM.render(
       <App/>,
       document.getElementById('app')

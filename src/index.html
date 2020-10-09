@@ -7,89 +7,21 @@
 <body>
 <h3>some website content not part of react</h3>
 <!--COPY THIS SNIPPET HERE - START -->
-<div id="sep-core"></div>
-<h3>some website content not part of react</h3>
-<div id="sep-map" style="width:100%; height: 500px"></div>
-<h3>some website content not part of react</h3>
-<div id="sep-address"></div>
-<h3>some website content not part of react</h3>
-<div id="sep-object-display"></div>
-
-<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700&display=swap" />
+<div id="react-root-node"></div>
 <script id="external-react-app"></script>
 <script type="text/javascript">
   // change path to match your file:
   window.onload = function () {
-    const sepEventName = 'sep-event'
-    // praedictio_public token
-    const token = "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJwcmFlZGljdGlvX3B1YmxpYyIsIm5iZiI6IjE2MDEwMjY0NDUiLCJqdGkiOiJlYzZkMzBhYS1hMGU2LTRlZjYtOTEyOS1mY2JiMzA1OWM1MjkiLCJodHRwOi8vc2NoZW1hcy54bWxzb2FwLm9yZy93cy8yMDA1LzA1L2lkZW50aXR5L2NsYWltcy9uYW1laWRlbnRpZmllciI6ImU2NDY4NWZhLTFiODgtNDcyZS1iZjkzLTU5NDk3NjUzNTkyNiIsImh0dHA6Ly9zY2hlbWFzLm1pY3Jvc29mdC5jb20vd3MvMjAwOC8wNi9pZGVudGl0eS9jbGFpbXMvcm9sZSI6IlB1YmxpYyIsIk1hbmRhbnQiOiJwcmFlZGljdGlvIiwiQXV0aG9yaXplZFJlc291cmNlcyI6IiptYXJrZXRzZW5zZSo6R0VUfCphZGRyZXNzcG9pbnRzLW5lYXJlc3QtYnktY29vcmRpbmF0ZXMqOkdFVHwqc2VhcmNoYWRkcmVzcyo6UE9TVCIsIkF1dGhvcml6ZWRSZWNvcmRzIjoiYWxsIiwiRXhjbHVkZWRGaWVsZHMiOiJub25lIiwiRm9yYmlkZGVuRmlsdGVycyI6Im5vbmUiLCJleHAiOjE5MTY1NTkyNDUsImlzcyI6IkN3S0F5NWpJbVlTSk9RUW5obEF3cnZLT0k1RWtmMFNpIiwiYXVkIjoiZW5lcmd5YXBwcy5jaCJ9.XIZ0boz1GExYKp0qbgpeRRS4FdjDuz1r-9kVLOCljeV-neXkll7hcNF-7odywg9OKI9EzoW2LlHBVIM8wQwRk-olbjr3rayGkuw2LSCexP6ze8f2MOhnch05IctnUVy8U0LAI2JJLDGtjke8yEdkV7r37ykrBmnVKKBroLgeaTi-2zrVCtmIp9P97tMrMPzqYy9pz7N0wX5CDt3MTfTggIJm8fukmAwgqLFCfGCsFZPaOVLpWVZIISAwt5MV8DN8aA2CNBxFDYQt1X8yTr9-TvrQ0NWBu0epxNDOm-OAVxVSGprjlkaq7FyKwV9CkgzMlEuMfp0tg8pqzezaPtXYZg"
-    let theme = encodeURIComponent(JSON.stringify({
-      "palette": {
-        "primary": {
-          "main": "#039f00"
-        },
-        "secondary": {
-          "main": "#0051b5"
-        }
-      }
-    }))
-    let lang = "de-ch";
-    let controls = "true";
-
-    let filterCountViewId = `open_marketsense_private_investor/filterCount`
-    let filterViewId = `open_marketsense_private_investor/filter`
-
-    // let filterCountViewId = `open_marketsense_gu_tu/filterCount`
-    // let filterViewId = `open_marketsense_gu_tu/filter`
-
-    // let filterCountViewId = `open_marketsense_transaction_manager/filterCount`
-    // let filterViewId = `open_marketsense_transaction_manager/filter`
-
-    window.addEventListener(sepEventName, (e) => {
+    const eventName = 'external-react-app'
+    window.addEventListener(eventName, (e) => {
       console.log('host: got event', { action: e.detail.action })
-      if(e.detail.action === "loaded-marketsense"){
-        window.dispatchEvent(new CustomEvent(sepEventName, {
-          detail: {
-            action: 'init-sep-map',
-            payload: {
-              mapContainerId: 'sep-map'
-            }
-          }
-        }))
-      }
-      if(e.detail.action === "loaded-address"){
-        window.dispatchEvent(new CustomEvent(sepEventName, {
-          detail: {
-            action: 'init-sep-address',
-            payload: {
-              addressContainerId: 'sep-address'
-            }
-          }
-        }))
-      }
-      if(e.detail.action === "loaded-sep-object-display"){
-        window.dispatchEvent(new CustomEvent(sepEventName, {
-          detail: {
-            action: 'init-sep-object-display',
-            payload: {
-              objectDisplayContainerId: 'sep-object-display'
-            }
-          }
-        }))
-      }
     })
     let mainScript = document.getElementById('external-react-app')
     mainScript.async = true
     mainScript.src = 'main.bundle.js?'
-      + 'scriptId=sep-core'
-      + '&sepEventName=' + sepEventName
+      + 'scriptId=react-root-node'
+      + '&eventName=' + eventName
       + '&v=' + Date.now()
-      + "&token=" + token
-      + "&theme=" + theme
-      + "&filterCountViewId=" + filterCountViewId
-      + "&filterViewId=" + filterViewId
-      + "&lang=" + lang
-      + "&controls=" + controls
 
     mainScript.addEventListener('load', function () {
       // the react app has rendered once
