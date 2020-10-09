@@ -1,8 +1,11 @@
 version: 2.1
 orbs:
   node: circleci/node@3.0.0
+jobs:
+  run-dev:
+    - run: npm run webpack-start-dev
 workflows:
   node-tests:
     jobs:
-      - run: npm run webpack-start-dev
+      - run-dev
       - node/test
