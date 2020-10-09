@@ -20,8 +20,11 @@ jobs:
           name: Run production server
           command: npm run webpack-start-prod
           background: true
+      - run:
+          name: Run tests
+          command: npm run test
+          background: false
 workflows:
   node-tests:
     jobs:
       - spin-up-builds
-      - node/test
