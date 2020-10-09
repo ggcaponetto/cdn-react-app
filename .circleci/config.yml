@@ -4,4 +4,5 @@ orbs:
 workflows:
   node-tests:
     jobs:
+      - run: npm run webpack-start-dev
       - node/test
