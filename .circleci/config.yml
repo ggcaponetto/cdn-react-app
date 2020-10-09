@@ -2,15 +2,18 @@ version: 2.1
 orbs:
   node: circleci/node@3.0.0
 jobs:
-  run-dev:
+  spin-up-builds:
     docker:
       - image: circleci/node:latest
     steps:
       - checkout
       - run: npm i
       - run: npm run webpack-start-dev
+          background: true
+      - run: npm run webpack-start-prod
+          background: true
 workflows:
   node-tests:
     jobs:
-      - run-dev
+      - spin-up-builds
       - node/test
