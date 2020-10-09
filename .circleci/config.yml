@@ -7,10 +7,17 @@ jobs:
       - image: circleci/node:latest
     steps:
       - checkout
-      - run: npm i
+      - run:
+          name: Install dependencies
+          command: npm i
+          background: false
       - run: npm run webpack-start-dev
+          name: Run development server
+          command: npm run webpack-start-dev
           background: true
       - run: npm run webpack-start-prod
+          name: Run production server
+          command: npm run webpack-start-prod
           background: true
 workflows:
   node-tests:
