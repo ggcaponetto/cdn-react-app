@@ -1,6 +1,6 @@
 version: 2.1
 orbs:
-  node: circleci/node@3.0.0
+  cypress: cypress-io/cypress@1.16.1
 jobs:
   spin-up-builds:
     docker:
