@@ -3,7 +3,14 @@ orbs:
   node: circleci/node@3.0.0
 jobs:
   run-dev:
-    - run: npm run webpack-start-dev
+    docker:
+      - image: circleci/<language>:<version TAG>
+        auth:
+          username: mydockerhub-user
+          password: $DOCKERHUB_PASSWORD  # context / project UI env-var reference
+    steps:
+      - checkout
+      - run: npm run webpack-start-dev
 workflows:
   node-tests:
     jobs:
