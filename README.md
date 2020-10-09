@@ -35,11 +35,12 @@ example integration:
 ```
 ### Development
 With ``npm run webpack-start-dev`` you can run/develop the app with hot module replacement enabled. In this
-case the ``/public`` folder will contain the files needed by webpack
+case the ``/public`` folder will contain the files needed by webpack.
+The development build will be available on [http://localhost:3000](http://localhost:3000).
 
 ### Production
 By running ``npm run webpack-start-prod`` all the required files will be generated in ``/dist``. This is the foder you
 can deploy to a CDN.
- A production preview will then be available on [http://localhost:5000](http://localhost:5000)
+ A production preview will then be available on [http://localhost:5000](http://localhost:5000).
 
 
