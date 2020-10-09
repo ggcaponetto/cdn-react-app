@@ -11,11 +11,11 @@ jobs:
           name: Install dependencies
           command: npm i
           background: false
-      - run: npm run webpack-start-dev
+      - run:
           name: Run development server
           command: npm run webpack-start-dev
           background: true
-      - run: npm run webpack-start-prod
+      - run:
           name: Run production server
           command: npm run webpack-start-prod
           background: true
