@@ -1,5 +1,6 @@
 # External React App
 
+[![ggcaponetto](https://circleci.com/gh/ggcaponetto/external-react-app.svg?style=shield)](https://app.circleci.com/pipelines/github/ggcaponetto/external-react-app?branch=master)
 [![forthebadge](https://forthebadge.com/images/badges/you-didnt-ask-for-this.svg)](https://forthebadge.com)
 
 This is a boilerplate repository to bootstrap a react app that can be easily intergrated via script tag into any
