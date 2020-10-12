@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom';
 import qs from 'qs';
 import { LinearProgress } from '@material-ui/core';
 import { createMuiTheme, ThemeProvider } from '@material-ui/core/styles';
+import AnotherSample from '../sample/another-sample'
 
 import { Helmet } from 'react-helmet';
 
@@ -62,6 +63,7 @@ function App() {
         <>
           <React.Suspense fallback={getLoadingComponent()}>
             <Sample appProps />
+            <AnotherSample />
           </React.Suspense>
         </>
       );
@@ -131,6 +133,7 @@ function App() {
 if (module.hot) {
   module.hot.accept([
     '../sample/sample',
+    '../sample/another-sample',
   ], () => {
     log.trace('Accepting the updated sample.js module!');
     ReactDOM.render(

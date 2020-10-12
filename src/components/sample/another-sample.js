@@ -21,8 +21,8 @@ const setupLogs = () => {
   }
 };
 
-export default function Sample(props) {
-  const fnName = 'Sample';
+export default function AnotherSample(props) {
+  const fnName = 'AnotherSample';
   const [result, setResult] = useState(null);
   useEffect(() => {
     setupLogs();
@@ -39,16 +39,8 @@ export default function Sample(props) {
         color: 'hotpink',
       }}
     >
-      <Button
-        variant="contained"
-        color="primary"
-        onClick={() => {
-        }}
-      >
-        This is a dummy button to test the MaterialUI library.
-      </Button>
       <h3>
-        This is a dynamically imported module!!
+        This is another module without dynamic import.
         {/* eslint-disable-next-line new-cap */}
         {(new moment()).toISOString()}
         {' '}
