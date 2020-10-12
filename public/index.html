@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>External React App</title>
+</head>
+<body>
+<h3>some website content not part of react</h3>
+<!--COPY THIS SNIPPET HERE - START -->
+<div id="react-root-node"></div>
+<script id="external-react-app"></script>
+<script type="text/javascript">
+  // change path to match your file:
+  window.onload = function () {
+    const eventName = 'external-react-app'
+    window.addEventListener(eventName, (e) => {
+      console.log('host: got event', { action: e.detail.action })
+    })
+    let mainScript = document.getElementById('external-react-app')
+    mainScript.async = true
+    mainScript.src = 'main.bundle.js?'
+      + 'scriptId=react-root-node'
+      + '&eventName=' + eventName
+      + '&v=' + Date.now()
+
+    mainScript.addEventListener('load', function () {
+      // the react app has rendered once
+      console.log('external-react-app: script loaded')
+    })
+  }
+</script>
+<!--COPY THIS SNIPPET HERE - END -->
+</body>
+</html>
