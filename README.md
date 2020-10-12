@@ -43,6 +43,11 @@ The development build will be available on [http://localhost:3000](http://localh
 By running ``npm run webpack-start-prod`` all the required files will be generated in ``/dist``. This is the foder you
 can deploy to a CDN.
  A production preview will then be available on [http://localhost:5000](http://localhost:5000).
+ 
+This project is configured to use hot module replacement and implements the same ``<ErrorBoundary/>`` used by
+[create-react-app](https://github.com/facebook/create-react-app). The linting style follows approximately the one used
+by [airbnb](https://www.airbnb.ch/).
+
 
 
 
