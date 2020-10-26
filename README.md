@@ -1,6 +1,6 @@
 # CDN React App
 
-[![ggcaponetto](https://circleci.com/gh/ggcaponetto/external-react-app.svg?style=shield)](https://app.circleci.com/pipelines/github/ggcaponetto/external-react-app?branch=master)
+[![ggcaponetto](https://circleci.com/gh/ggcaponetto/cdn-react-app.svg?style=shield)](https://app.circleci.com/pipelines/github/ggcaponetto/external-react-app?branch=master)
 
 This is a boilerplate repository to bootstrap a react app that can be easily intergrated via script tag into any
 existing website with CDN deployment in mind.
