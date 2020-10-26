@@ -1,4 +1,3 @@
-
 function filter_trans_manager(doc) {
   if (
     doc.addr_anzahlwohnungen_parcel >= 30
@@ -6,21 +5,19 @@ function filter_trans_manager(doc) {
     && [1, 2, 3, 4, 5].indexOf(doc.districttype) !== -1
     && [3, 4].indexOf(doc.publictransportquality) !== -1
   ) {
-    emit('c', doc.lat + ',' + doc.long)
+    emit('c', `${doc.lat},${doc.long}`);
   }
 }
-
 
 function filter_gutu(doc) {
   if (
     doc.isemptyparcel === true
-    && ( doc.parcelarea >= 500 )
-    && ( doc.parcelperimeter / (4 * Math.sqrt(doc.parcelarea)) < 1.5 )
+    && (doc.parcelarea >= 500)
+    && (doc.parcelperimeter / (4 * Math.sqrt(doc.parcelarea)) < 1.5)
   ) {
-    emit('c', doc.lat + ',' + doc.long)
+    emit('c', `${doc.lat},${doc.long}`);
   }
 }
-
 
 function filter_pvt_invest(doc) {
   if (
@@ -30,6 +27,6 @@ function filter_pvt_invest(doc) {
     && [1, 2, 3, 4, 5].indexOf(doc.districttype) !== -1
     && [3, 4].indexOf(doc.publictransportquality) !== -1
   ) {
-    emit('c', doc.lat + ',' + doc.long)
+    emit('c', `${doc.lat},${doc.long}`);
   }
 }
