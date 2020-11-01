@@ -4,15 +4,17 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "start": "node src/index.js"
+    "start": "cross-env PORT=3001 node ./src/index.js",
+    "nodemon": "nodemon --watch ./src --exec \"npm run start\""
   },
   "dependencies": {
+    "cross-env": "^7.0.2",
     "express": "^4.15.2",
+    "loglevel": "^1.7.0",
+    "nodemon": "^2.0.6",
     "socket.io": "^1.7.3"
   },
   "author": "",
   "license": "ISC",
-  "devDependencies": {
-
-  }
+  "devDependencies": {}
 }
