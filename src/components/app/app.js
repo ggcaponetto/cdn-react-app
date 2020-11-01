@@ -1,15 +1,17 @@
 import React, { useEffect, useState } from 'react';
 import ReactDOM from 'react-dom';
+import "./app.css"
 import qs from 'qs';
 import { LinearProgress } from '@material-ui/core';
 import { createMuiTheme, ThemeProvider } from '@material-ui/core/styles';
-import AnotherSample from '../sample/another-sample'
 
 import { Helmet } from 'react-helmet';
 
 import log from 'loglevel';
-
-const Sample = React.lazy(() => import(/* webpackChunkName: "sample" */ './../sample/sample.js'));
+// import AnotherSample from '../sample/another-sample';
+// eslint-disable-next-line max-len
+// const Sample = React.lazy(() => import(/* webpackChunkName: "sample" */ './../sample/sample.js'));
+const Game = React.lazy(() => import(/* webpackChunkName: "game" */ './../game/game.js'));
 
 log.setLevel('debug');
 
@@ -62,8 +64,7 @@ function App() {
       return (
         <>
           <React.Suspense fallback={getLoadingComponent()}>
-            <Sample appProps />
-            <AnotherSample />
+            <Game />
           </React.Suspense>
         </>
       );
@@ -123,15 +124,14 @@ function App() {
       <Helmet>
         <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700&display=swap" />
       </Helmet>
-      <div>
-        {getComponent()}
-      </div>
+      {getComponent()}
     </ThemeProvider>
   );
 }
 
 if (module.hot) {
   module.hot.accept([
+    '../game/game',
     '../sample/sample',
     '../sample/another-sample',
   ], () => {
