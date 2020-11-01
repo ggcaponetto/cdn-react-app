@@ -3,7 +3,14 @@ import * as BABYLON from '@babylonjs/core/Legacy/legacy';
 import * as OIMO from 'oimo/build/oimo';
 import * as CANNON from 'cannon';
 import { jsx, css } from '@emotion/core';
+import * as log from 'loglevel';
+
+// with ES6 import
+import io from 'socket.io-client';
+
 import metalTexture from './textures/metal-rust.png';
+
+log.setLevel(log.levels.DEBUG);
 // this comment tells babel to convert jsx to calls to a function called jsx instead of React.createElement
 /** @jsx jsx */
 
@@ -16,6 +23,21 @@ const style = css`
 
 export default function Game(props) {
   const fnName = 'Game';
+  const [socket, setSocket] = useState(null);
+  useEffect(() => {
+    const target = 'http://localhost:3001';
+    const mySocket = io(target);
+    mySocket.on('connect', () => {
+      log.debug('connected');
+    });
+    mySocket.on('my-message', (data) => {
+      log.debug('got message', data);
+    });
+    mySocket.on('disconnect', () => {
+      log.debug('disconnected');
+    });
+    setSocket(mySocket);
+  }, []);
   useEffect(() => {
     const canvas = document.getElementById('renderCanvas'); // Get the canvas element
     const engine = new BABYLON.Engine(canvas, true); // Generate the BABYLON 3D engine
@@ -28,7 +50,7 @@ export default function Game(props) {
       const camera = new BABYLON.FreeCamera('Camera', new BABYLON.Vector3(0, 0, -20), scene);
       camera.attachControl(canvas, true);
       camera.checkCollisions = true;
-      camera.applyGravity = true;
+      camera.applyGravity = false;
       camera.setTarget(new BABYLON.Vector3(0, 0, 0));
 
       const light = new BABYLON.DirectionalLight('dir02', new BABYLON.Vector3(0.2, -1, 0), scene);

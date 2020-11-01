@@ -54,7 +54,8 @@
     "webpack": "^4.44.2",
     "webpack-bundle-analyzer": "^3.9.0",
     "webpack-cli": "^3.3.12",
-    "webpack-dev-server": "^3.11.0"
+    "webpack-dev-server": "^3.11.0",
+    "cypress": "^5.3.0"
   },
   "dependencies": {
     "@emotion/core": "^10.1.0",
@@ -62,7 +63,6 @@
     "@material-ui/lab": "^4.0.0-alpha.56",
     "axios": "^0.20.0",
     "cannon": "^0.6.2",
-    "cypress": "^5.3.0",
     "i18next": "^19.7.0",
     "i18next-locize-backend": "^4.1.8",
     "leaflet": "^1.7.1",
@@ -72,14 +72,13 @@
     "loglevel": "^1.7.0",
     "moment": "^2.29.0",
     "oimo": "^1.0.9",
-    "pouchdb": "^7.2.2",
-    "pouchdb-find": "^7.2.2",
     "qs": "^6.9.4",
     "react": "^16.13.1",
     "react-dom": "^16.13.1",
     "react-helmet": "^6.1.0",
     "react-i18next": "^11.7.3",
     "react-json-view": "^1.19.1",
+    "socket.io-client": "^2.3.1",
     "uuid": "^8.3.0"
   }
 }
