@@ -33,6 +33,10 @@ example integration:
 </script>
 <!--COPY/PASTE THIS SNIPPET HERE - END -->
 ```
+### Getting started
+1. ``npm i``
+1. ``npm run webpack-start-dev``
+
 ### Development
 With ``npm run webpack-start-dev`` you can run/develop the app with hot module replacement enabled. In this
 case the ``/public`` folder will contain the files needed by webpack.
