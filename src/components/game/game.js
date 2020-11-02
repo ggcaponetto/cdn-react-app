@@ -21,6 +21,50 @@ const style = css`
   padding: 0;
 `;
 
+class InputController {
+  constructor(scene, options = { speed: 0.2 }) {
+    this.speed = options.speed;
+    this.targets = [];
+    this.scene = scene;
+    this.inputMap = {};
+    this.onBeforeRender = () => {
+      this.targets.forEach((myTarget) => {
+        const myRenderTarget = myTarget;
+        if (this.inputMap.w || this.inputMap.ArrowUp) {
+          myRenderTarget.position.z += this.speed;
+        }
+        if (this.inputMap.a || this.inputMap.ArrowLeft) {
+          myRenderTarget.position.x -= this.speed;
+        }
+        if (this.inputMap.s || this.inputMap.ArrowDown) {
+          myRenderTarget.position.z -= this.speed;
+        }
+        if (this.inputMap.d || this.inputMap.ArrowRight) {
+          myRenderTarget.position.x += this.speed;
+        }
+      });
+    };
+    this.scene.actionManager = new BABYLON.ActionManager(this.scene);
+    this.scene.actionManager.registerAction(
+      new BABYLON.ExecuteCodeAction(BABYLON.ActionManager.OnKeyDownTrigger, ((evt) => {
+        this.inputMap[evt.sourceEvent.key] = evt.sourceEvent.type === 'keydown';
+      })),
+    );
+    this.scene.actionManager.registerAction(
+      new BABYLON.ExecuteCodeAction(BABYLON.ActionManager.OnKeyUpTrigger, ((evt) => {
+        this.inputMap[evt.sourceEvent.key] = evt.sourceEvent.type === 'keydown';
+      })),
+    );
+    this.scene.onBeforeRenderObservable.add(this.onBeforeRender);
+  }
+
+  addTarget(target) {
+    this.scene.onBeforeRenderObservable.remove(this.onBeforeRender);
+    this.targets = [...this.targets, target];
+    this.scene.onBeforeRenderObservable.add(this.onBeforeRender);
+  }
+}
+
 export default function Game(props) {
   const fnName = 'Game';
   const [socket, setSocket] = useState(null);
@@ -76,8 +120,10 @@ export default function Game(props) {
 
       // Spheres
       let y = 0;
-      for (var index = 0; index < 100; index++) {
-        var sphere = BABYLON.Mesh.CreateSphere('Sphere0', 16, 3, scene);
+      const controller = new InputController(scene);
+
+      for (let index = 0; index < 5; index++) {
+        const sphere = BABYLON.Mesh.CreateSphere('Sphere0', 16, 3, scene);
         sphere.material = materialAmiga;
 
         sphere.position = new BABYLON.Vector3(Math.random() * 20 - 10, y, Math.random() * 10 - 5);
@@ -85,25 +131,8 @@ export default function Game(props) {
         shadowGenerator.addShadowCaster(sphere);
 
         sphere.physicsImpostor = new BABYLON.PhysicsImpostor(sphere, BABYLON.PhysicsImpostor.SphereImpostor, { mass: 1 }, scene);
-
+        controller.addTarget(sphere)
         y += 2;
-      }
-
-      // Link
-      const spheres = [];
-      for (index = 0; index < 10; index++) {
-        sphere = BABYLON.Mesh.CreateSphere('Sphere0', 16, 1, scene);
-        spheres.push(sphere);
-        sphere.material = materialAmiga2;
-        sphere.position = new BABYLON.Vector3(Math.random() * 20 - 10, y, Math.random() * 10 - 5);
-
-        shadowGenerator.addShadowCaster(sphere);
-
-        sphere.physicsImpostor = new BABYLON.PhysicsImpostor(sphere, BABYLON.PhysicsImpostor.SphereImpostor, { mass: 1 }, scene);
-      }
-
-      for (index = 0; index < 9; index++) {
-        spheres[index].setPhysicsLinkWith(spheres[index + 1], new BABYLON.Vector3(0, 0.5, 0), new BABYLON.Vector3(0, -0.5, 0));
       }
 
       // Box
