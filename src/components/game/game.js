@@ -29,42 +29,76 @@ const performanceMonitorStyle = css`
   top: 0;
 `;
 
+class Util {
+  static showWorldAxis(scene, size) {
+    const makeTextPlane = function (text, color, mySize) {
+      const dynamicTexture = new BABYLON.DynamicTexture('DynamicTexture', 50, scene, true);
+      dynamicTexture.hasAlpha = true;
+      dynamicTexture.drawText(text, 5, 40, 'bold 36px Arial', color, 'transparent', true);
+      const plane = BABYLON.Mesh.CreatePlane('TextPlane', mySize, scene, true);
+      plane.material = new BABYLON.StandardMaterial('TextPlaneMaterial', scene);
+      plane.material.backFaceCulling = false;
+      plane.material.specularColor = new BABYLON.Color3(0, 0, 0);
+      plane.material.diffuseTexture = dynamicTexture;
+      return plane;
+    };
+    const axisX = BABYLON.Mesh.CreateLines('axisX', [
+      BABYLON.Vector3.Zero(),
+      new BABYLON.Vector3(size, 0, 0), new BABYLON.Vector3(size * 0.95, 0.05 * size, 0),
+      new BABYLON.Vector3(size, 0, 0), new BABYLON.Vector3(size * 0.95, -0.05 * size, 0),
+    ], scene);
+    axisX.color = new BABYLON.Color3(1, 0, 0);
+    const xChar = makeTextPlane('X', 'red', size / 10);
+    xChar.position = new BABYLON.Vector3(0.9 * size, -0.05 * size, 0);
+    const axisY = BABYLON.Mesh.CreateLines('axisY', [
+      BABYLON.Vector3.Zero(),
+      new BABYLON.Vector3(0, size, 0), new BABYLON.Vector3(-0.05 * size, size * 0.95, 0),
+      new BABYLON.Vector3(0, size, 0), new BABYLON.Vector3(0.05 * size, size * 0.95, 0),
+    ], scene);
+    axisY.color = new BABYLON.Color3(0, 1, 0);
+    const yChar = makeTextPlane('Y', 'green', size / 10);
+    yChar.position = new BABYLON.Vector3(0, 0.9 * size, -0.05 * size);
+    const axisZ = BABYLON.Mesh.CreateLines('axisZ', [
+      BABYLON.Vector3.Zero(),
+      new BABYLON.Vector3(0, 0, size), new BABYLON.Vector3(0, -0.05 * size, size * 0.95),
+      new BABYLON.Vector3(0, 0, size), new BABYLON.Vector3(0, 0.05 * size, size * 0.95),
+    ], scene);
+    axisZ.color = new BABYLON.Color3(0, 0, 1);
+    const zChar = makeTextPlane('Z', 'blue', size / 10);
+    zChar.position = new BABYLON.Vector3(0, 0.05 * size, 0.9 * size);
+  }
+}
+
 class InputController {
   constructor(scene, options = { speed: 0.2 }) {
     this.speed = options.speed;
     this.targets = [];
     this.scene = scene;
     this.inputMap = {};
+    this.listener = null;
     this.onBeforeRender = () => {
       this.targets.forEach((myTarget) => {
         const myRenderTarget = myTarget;
         // Impulse Settings
-        let impulseDirection = null;
-        const impulseMagnitude = 5;
-        const contactLocalRefPoint = BABYLON.Vector3.Zero();
-        const applyImpulse = function () {
-          myRenderTarget.physicsImpostor
-            .applyImpulse(
-              impulseDirection.scale(impulseMagnitude),
-              myRenderTarget.getAbsolutePosition().add(contactLocalRefPoint),
-            );
+        const speed = 0.01 * scene.getEngine().getDeltaTime();
+        const move = (axis, amount) => {
+          myRenderTarget.position[axis] += amount;
+          if (this.listener) {
+            this.listener(myRenderTarget.position);
+          }
         };
 
         if (this.inputMap.w /* || this.inputMap.ArrowUp */) {
-          impulseDirection = new BABYLON.Vector3(0, 0, 1);
-          applyImpulse();
+          move('z', speed);
         }
         if (this.inputMap.a /* || this.inputMap.ArrowLeft */) {
-          impulseDirection = new BABYLON.Vector3(1, 0, 0);
-          applyImpulse();
+          move('x', speed);
         }
         if (this.inputMap.s /* || this.inputMap.ArrowDown */) {
-          impulseDirection = new BABYLON.Vector3(0, 0, -1);
-          applyImpulse();
+          move('z', -speed);
         }
         if (this.inputMap.d /* || this.inputMap.ArrowRight */) {
-          impulseDirection = new BABYLON.Vector3(-1, 0, 0);
-          applyImpulse();
+          move('x', -speed);
         }
       });
     };
@@ -82,6 +116,10 @@ class InputController {
     this.scene.onBeforeRenderObservable.add(this.onBeforeRender);
   }
 
+  addListener(myListener) {
+    this.listener = myListener;
+  }
+
   addTarget(target) {
     this.scene.onBeforeRenderObservable.remove(this.onBeforeRender);
     this.targets = [...this.targets, target];
@@ -94,22 +132,100 @@ export default function Game(props) {
   // const fnName = 'Game';
   // eslint-disable-next-line no-unused-vars
   const [socket, setSocket] = useState(null);
+
+  const sceneRef = useRef(null);
   const [fps, setFps] = useState(null);
   const performanceMonitor = useRef(null);
+
+  const [clientGameState, setClientGameState] = useState(null);
+  const [serverGameState, setServerGameState] = useState(null);
+
+  const getPlayerMaterial = (scene, player) => {
+    // Player Material
+    const material = new BABYLON.StandardMaterial('playerMaterial', scene);
+    material.diffuseColor = new BABYLON.Color3(player.color.r, player.color.g, player.color.b);
+    material.emissiveColor = new BABYLON.Color3(player.color.r, player.color.g, player.color.b);
+    return material;
+  };
+  const getPlayerMesh = (scene, player) => {
+    const sphere = BABYLON.Mesh.CreateSphere(player.socketId, 16, 3, scene);
+    sphere.physicsImpostor = new BABYLON.PhysicsImpostor(
+      sphere,
+      BABYLON.PhysicsImpostor.SphereImpostor,
+      { mass: 0, friction: 0.1, restitution: 0.3 },
+      scene,
+    );
+    sphere.material = getPlayerMaterial(scene, player);
+    sphere.position = new BABYLON.Vector3(
+      player.position.x,
+      player.position.y,
+      player.position.z,
+    );
+    return sphere;
+  };
+  const syncToServerState = (scene, myClientGameState, myServerGameState) => {
+    const initialState = {
+      players: [],
+    };
+    const newClientGameState = initialState;
+
+    const controller = new InputController(scene);
+    controller.addListener((data) => {
+      socket.emit('update:player:position', JSON.stringify(data));
+    });
+
+    myServerGameState.players.forEach((serverPlayer) => {
+      const sphere = getPlayerMesh(scene, serverPlayer);
+      newClientGameState.players.push({
+        socketId: serverPlayer.socketId,
+        mesh: sphere,
+      });
+      if (serverPlayer.socketId === socket.id) {
+        controller.addTarget(sphere);
+      }
+    });
+    setClientGameState(newClientGameState);
+  };
+  const updateClientFromServer = (scene, myClientGameState, myServerGameState) => {
+    log.debug('updateClientFromServer', { scene, myClientGameState, myServerGameState });
+  };
+
+  const updateGame = (myClientGameState, myServerGameState) => {
+    if (!myClientGameState) {
+      syncToServerState(sceneRef.current, myClientGameState, myServerGameState);
+    } else {
+      updateClientFromServer(sceneRef.current, myClientGameState, myServerGameState);
+    }
+  };
+
+  useEffect(() => {
+    log.debug('serverGameState changed', { clientGameState, serverGameState });
+    if (sceneRef.current) {
+      updateGame(clientGameState, serverGameState);
+    }
+  }, [serverGameState, clientGameState]);
+
   useEffect(() => {
     const target = 'http://localhost:3001';
     const mySocket = io(target);
     mySocket.on('connect', () => {
       log.debug('connected');
     });
-    mySocket.on('my-message', (data) => {
-      log.debug('got message', data);
+    mySocket.on('update', (messageString) => {
+      try {
+        const message = JSON.parse(messageString);
+        // log.debug('update', message);
+        setServerGameState(message);
+      } catch (e) {
+        log.error('could not parse message', messageString);
+      }
     });
     mySocket.on('disconnect', () => {
       log.debug('disconnected');
     });
     setSocket(mySocket);
   }, []);
+
   useEffect(() => {
     const canvas = document.getElementById('renderCanvas'); // Get the canvas element
     const engine = new BABYLON.Engine(canvas, true); // Generate the BABYLON 3D engine
@@ -126,13 +242,6 @@ export default function Game(props) {
 
       const light = new BABYLON.DirectionalLight('dir02', new BABYLON.Vector3(0.2, -1, 0), scene);
       light.position = new BABYLON.Vector3(0, 80, 0);
-
-      // Material
-      const materialMetal = new BABYLON.StandardMaterial('metalMaterial', scene);
-      materialMetal.diffuseTexture = new BABYLON.Texture(metalTexture, scene);
-      materialMetal.emissiveColor = new BABYLON.Color3(0.5, 0.5, 0.5);
-      materialMetal.diffuseTexture.uScale = 5;
-      materialMetal.diffuseTexture.vScale = 5;
 
       // Shadows
       const shadowGenerator = new BABYLON.ShadowGenerator(2048, light);
@@ -220,32 +329,7 @@ export default function Game(props) {
       border3.material = groundMat;
       ground.receiveShadows = true;
 
-      // Spheres
-      let y = 0;
-      const controller = new InputController(scene);
-
-      for (let index = 0; index < 1; index += 1) {
-        const sphere = BABYLON.Mesh.CreateSphere('Sphere0', 16, 3, scene);
-        sphere.physicsImpostor = new BABYLON.PhysicsImpostor(
-          sphere,
-          BABYLON.PhysicsImpostor.SphereImpostor,
-          { mass: 1, friction: 0.1, restitution: 0.3 },
-          scene,
-        );
-        sphere.material = materialMetal;
-        sphere.position = new BABYLON.Vector3(Math.random() * 20 - 10, y, Math.random() * 10 - 5);
-        /*        sphere.physicsImpostor.registerOnPhysicsCollide([
-          border0.physicsImpostor,
-          border1.physicsImpostor,
-          border2.physicsImpostor,
-          border3.physicsImpostor,
-        ], (collider, collideAgainst) => {
-          log.debug('collision', { collider, collideAgainst });
-        }); */
-        shadowGenerator.addShadowCaster(sphere);
-        controller.addTarget(sphere);
-        y += 2;
-      }
+      // Util.showWorldAxis(scene, 5);
 
       return scene;
     };
@@ -269,19 +353,18 @@ export default function Game(props) {
     window.addEventListener('resize', () => {
       engine.resize();
     });
+
+    sceneRef.current = scene;
   }, []);
   return (
     <div css={styleDiv}>
-      <canvas key={1} css={styleDiv} id="renderCanvas" touch-action="none" />
+      <canvas
+        css={styleDiv}
+        id="renderCanvas"
+        touch-action="none"
+      />
       <div
-        key={2}
-        css={{
-          position: 'fixed',
-          background: 'black',
-          color: 'white',
-          left: 0,
-          top: 0,
-        }}
+        css={performanceMonitorStyle}
       >
         {`${fps} fps`}
       </div>
