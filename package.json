@@ -7,7 +7,7 @@
     "clean-dist": "shx rm -rf ./dist/*",
     "clean-public": "shx rm -rf ./public/*",
     "serve-public": "http-server ./public",
-    "serve-dist": "http-server ./dist",
+    "serve-dist": "http-server -p 80 ./dist",
     "webpack-start-prod": "npm run webpack-prod && open-cli http://localhost:5000 && http-server -p 5000 ./dist",
     "webpack-start-dev": "npm run webpack-dev && open-cli http://localhost:3000 && node ./node_modules/webpack-dev-server/bin/webpack-dev-server.js --config webpack.config.dev.js",
     "webpack-dev": "npm run clean-public && cross-env NODE_ENV=development node ./node_modules/webpack/bin/webpack.js --config webpack.config.dev.js && shx cp src/index.html public/index.html",
