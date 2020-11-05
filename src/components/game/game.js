@@ -131,9 +131,10 @@ class InputController {
 export default function Game(props) {
   // const fnName = 'Game';
   // eslint-disable-next-line no-unused-vars
-  const [socket, setSocket] = useState(null);
+  const socketRef = useRef(null);
 
   const sceneRef = useRef(null);
+  const controllerRef = useRef(null);
   const [fps, setFps] = useState(null);
   const performanceMonitor = useRef(null);
 
@@ -163,16 +164,22 @@ export default function Game(props) {
     );
     return sphere;
   };
-  const syncToServerState = (scene, myClientGameState, myServerGameState) => {
+  const getPlayerBySocketId = (gameState, id) => gameState.players
+    .filter(
+      (player) => player.socketId === id,
+    )[0] || null;
+  const syncToServerState = (scene, myServerGameState) => {
     const initialState = {
       players: [],
     };
     const newClientGameState = initialState;
 
-    const controller = new InputController(scene);
+    // save the player controller
+    const controller = new InputController(sceneRef.current);
     controller.addListener((data) => {
-      socket.emit('update:player:position', JSON.stringify(data));
+      socketRef.current.emit('update:player:position', JSON.stringify(data));
     });
+    newClientGameState.playerController = controller;
 
     myServerGameState.players.forEach((serverPlayer) => {
       const sphere = getPlayerMesh(scene, serverPlayer);
@@ -180,30 +187,72 @@ export default function Game(props) {
         socketId: serverPlayer.socketId,
         mesh: sphere,
       });
-      if (serverPlayer.socketId === socket.id) {
-        controller.addTarget(sphere);
+      if (serverPlayer.socketId === socketRef.current.id) {
+        newClientGameState.playerController.addTarget(sphere);
       }
     });
     setClientGameState(newClientGameState);
   };
-  const updateClientFromServer = (scene, myClientGameState, myServerGameState) => {
-    log.debug('updateClientFromServer', { scene, myClientGameState, myServerGameState });
+  const updateClientFromServer = (scene, myServerGameState) => {
+    log.debug('updateClientFromServer', { scene, myServerGameState });
+    const newClientGameState = clientGameState;
+    // add players that are in the server state but are not in the client state
+    myServerGameState.players.forEach((serverPlayer) => {
+      const clientPlayer = getPlayerBySocketId(clientGameState, serverPlayer.socketId);
+      if (!clientPlayer) {
+        const sphere = getPlayerMesh(scene, serverPlayer);
+        newClientGameState.players.push({
+          socketId: serverPlayer.socketId,
+          mesh: sphere,
+        });
+        if (serverPlayer.socketId === socketRef.current.id) {
+          controllerRef.current.addTarget(sphere);
+        }
+      }
+    });
+    // remove players that are not in the server state but are in the client state
+    newClientGameState.players.forEach((clientPlayer) => {
+      const serverPlayer = getPlayerBySocketId(myServerGameState, clientPlayer.socketId);
+      if (!serverPlayer) {
+        clientPlayer.mesh.dispose();
+      }
+    });
+
+    newClientGameState.players = newClientGameState.players.map((clientPlayer) => {
+      let newPlayer = clientPlayer;
+      myServerGameState.players.forEach((serverPlayer) => {
+        if (
+          clientPlayer.socketId === serverPlayer.socketId
+          && serverPlayer.socketId !== socketRef.current.id
+        ) {
+          newPlayer = clientPlayer;
+          newPlayer.mesh.position = serverPlayer.position;
+        }
+      });
+      return newPlayer;
+    });
+
+    setClientGameState(newClientGameState);
   };
 
-  const updateGame = (myClientGameState, myServerGameState) => {
-    if (!myClientGameState) {
-      syncToServerState(sceneRef.current, myClientGameState, myServerGameState);
-    } else {
-      updateClientFromServer(sceneRef.current, myClientGameState, myServerGameState);
+  const updateGame = (myServerGameState) => {
+    if (sceneRef.current && socketRef.current) {
+      if (
+        !clientGameState
+      ) {
+        syncToServerState(sceneRef.current, myServerGameState);
+      } else {
+        updateClientFromServer(sceneRef.current, myServerGameState);
+      }
     }
   };
 
   useEffect(() => {
-    log.debug('serverGameState changed', { clientGameState, serverGameState });
-    if (sceneRef.current) {
-      updateGame(clientGameState, serverGameState);
-    }
-  }, [serverGameState, clientGameState]);
+    log.debug('serverGameState changed', {
+      clientGameState, serverGameState, sceneRef, socketRef,
+    });
+    updateGame(serverGameState);
+  }, [serverGameState]);
 
   useEffect(() => {
     const target = 'http://localhost:3001';
@@ -214,7 +263,7 @@ export default function Game(props) {
     mySocket.on('update', (messageString) => {
       try {
         const message = JSON.parse(messageString);
-        // log.debug('update', message);
+        log.debug('update', message);
         setServerGameState(message);
       } catch (e) {
         log.error('could not parse message', messageString);
@@ -223,7 +272,7 @@ export default function Game(props) {
     mySocket.on('disconnect', () => {
       log.debug('disconnected');
     });
-    setSocket(mySocket);
+    socketRef.current = mySocket;
   }, []);
 
   useEffect(() => {
