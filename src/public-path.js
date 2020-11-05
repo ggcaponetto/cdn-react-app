@@ -4,6 +4,7 @@
 
 // inject the env variables
 process.env.REACT_APP_ENV = process.env.NODE_ENV;
+process.env.REACT_APP_VERSION = process.env.APP_VERSION;
 
 // Replace the webpack public path assuming that
 // all resources are hosted on the same path as the bundle.js file.

@@ -8,7 +8,7 @@ import * as log from 'loglevel';
 // with ES6 import
 import io from 'socket.io-client';
 
-import metalTexture from './textures/metal-rust.png';
+// import metalTexture from './textures/metal-rust.png';
 
 log.setLevel(log.levels.DEBUG);
 // eslint-disable-next-line max-len
@@ -29,6 +29,7 @@ const performanceMonitorStyle = css`
   top: 0;
 `;
 
+/* eslint-disable-next-line no-unused-vars */
 class Util {
   static showWorldAxis(scene, size) {
     const makeTextPlane = function (text, color, mySize) {
@@ -129,7 +130,7 @@ class InputController {
 
 // eslint-disable-next-line no-unused-vars
 export default function Game(props) {
-  // const fnName = 'Game';
+  const fnName = 'Game';
   // eslint-disable-next-line no-unused-vars
   const socketRef = useRef(null);
 
@@ -256,6 +257,9 @@ export default function Game(props) {
 
   useEffect(() => {
     const target = 'http://localhost:3001';
+    log.debug(`${fnName} - constructor`, {
+      process,
+    });
     const mySocket = io(target);
     mySocket.on('connect', () => {
       log.debug('connected');

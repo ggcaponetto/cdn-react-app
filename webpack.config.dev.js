@@ -1,6 +1,7 @@
 const webpack = require('webpack');
 const path = require('path');
 const ErrorOverlayPlugin = require('error-overlay-webpack-plugin');
+const { getDefinePlugin } = require('./webpack.util');
 
 const NODE_ENV = process.env.NODE_ENV || 'development';
 
@@ -67,9 +68,7 @@ module.exports = (env, argv) => {
     plugins: [
       new ErrorOverlayPlugin(),
       new webpack.HotModuleReplacementPlugin(),
-      new webpack.DefinePlugin({
-        'process.env.NODE_ENV': JSON.stringify(NODE_ENV),
-      }),
+      getDefinePlugin(),
     ],
     devServer: {
       contentBase: path.join(__dirname, 'public'),

@@ -1,5 +1,6 @@
 const webpack = require('webpack');
 const path = require('path');
+const { getDefinePlugin } = require('./webpack.util');
 
 const NODE_ENV = process.env.NODE_ENV || 'development';
 
@@ -65,9 +66,7 @@ module.exports = (env, argv) => {
       filename: '[name].bundle.js',
     },
     plugins: [
-      new webpack.DefinePlugin({
-        'process.env.NODE_ENV': JSON.stringify(NODE_ENV),
-      }),
+      getDefinePlugin(),
     ],
   };
   console.log('webpack is using config', config);
