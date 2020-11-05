@@ -4,17 +4,27 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "start": "cross-env PORT=3001 node ./src/index.js",
+    "start": "cross-env PORT=3001 node ./dist/index.js",
+    "dev": "cross-env PORT=3001 npx babel-node --configFile ./babel.config.json ./src/index.js",
+    "build": "node ./node_modules/@babel/cli/bin/babel.js --configFile ./babel.config.json src -d dist",
     "nodemon": "nodemon --watch ./src --exec \"npm run start\""
   },
   "dependencies": {
+    "@babylonjs/core": "^4.1.0",
+    "cannon": "^0.6.2",
     "cross-env": "^7.0.2",
     "express": "^4.15.2",
     "loglevel": "^1.7.0",
     "nodemon": "^2.0.6",
+    "oimo": "^1.0.9",
     "socket.io": "^1.7.3"
   },
   "author": "",
   "license": "ISC",
-  "devDependencies": {}
+  "devDependencies": {
+    "@babel/cli": "^7.12.1",
+    "@babel/core": "^7.12.1",
+    "@babel/preset-env": "^7.12.1",
+    "@babel/register": "^7.12.1"
+  }
 }

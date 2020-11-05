@@ -30,7 +30,7 @@ const performanceMonitorStyle = css`
 `;
 
 /* eslint-disable-next-line no-unused-vars */
-class Util {
+export class Util {
   static showWorldAxis(scene, size) {
     const makeTextPlane = function (text, color, mySize) {
       const dynamicTexture = new BABYLON.DynamicTexture('DynamicTexture', 50, scene, true);
@@ -143,7 +143,7 @@ class InputController {
 }
 
 // eslint-disable-next-line no-unused-vars
-export default function Game(props) {
+export function Game(props) {
   const fnName = 'Game';
   // eslint-disable-next-line no-unused-vars
   const socketRef = useRef(null);
