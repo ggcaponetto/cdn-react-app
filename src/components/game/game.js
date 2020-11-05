@@ -76,7 +76,6 @@ class InputController {
     this.targets = [];
     this.scene = scene;
     this.inputMap = {};
-    this.listener = null;
     this.onBeforeRender = () => {
       this.targets.forEach((myTarget) => {
         const myRenderTarget = myTarget;
@@ -84,9 +83,16 @@ class InputController {
         const speed = 0.01 * scene.getEngine().getDeltaTime();
         const move = (axis, amount) => {
           myRenderTarget.position[axis] += amount;
-          if (this.listener) {
-            this.listener(myRenderTarget.position);
-          }
+        };
+
+        const impulse = (impulseDirection, amount) => {
+          // Impulse Settings
+          const impulseMagnitude = amount;
+          const contactLocalRefPoint = BABYLON.Vector3.Zero();
+          myRenderTarget.physicsImpostor.applyImpulse(
+            impulseDirection.scale(impulseMagnitude),
+            myRenderTarget.getAbsolutePosition().add(contactLocalRefPoint),
+          );
         };
 
         if (this.inputMap.w /* || this.inputMap.ArrowUp */) {
@@ -100,6 +106,18 @@ class InputController {
         }
         if (this.inputMap.d /* || this.inputMap.ArrowRight */) {
           move('x', -speed);
+        }
+        if (this.inputMap.i /* || this.inputMap.ArrowRight */) {
+          impulse(new BABYLON.Vector3(0, 0, 1), 80);
+        }
+        if (this.inputMap.k /* || this.inputMap.ArrowRight */) {
+          impulse(new BABYLON.Vector3(0, 0, -1), 80);
+        }
+        if (this.inputMap.j /* || this.inputMap.ArrowRight */) {
+          impulse(new BABYLON.Vector3(1, 0, 0), 80);
+        }
+        if (this.inputMap.l /* || this.inputMap.ArrowRight */) {
+          impulse(new BABYLON.Vector3(-1, 0, 0), 80);
         }
       });
     };
@@ -115,10 +133,6 @@ class InputController {
       })),
     );
     this.scene.onBeforeRenderObservable.add(this.onBeforeRender);
-  }
-
-  addListener(myListener) {
-    this.listener = myListener;
   }
 
   addTarget(target) {
@@ -151,12 +165,25 @@ export default function Game(props) {
   };
   const getPlayerMesh = (scene, player) => {
     const sphere = BABYLON.Mesh.CreateSphere(player.socketId, 16, 3, scene);
-    sphere.physicsImpostor = new BABYLON.PhysicsImpostor(
+    const physicsImpostor = new BABYLON.PhysicsImpostor(
       sphere,
       BABYLON.PhysicsImpostor.SphereImpostor,
-      { mass: 0, friction: 0.1, restitution: 0.3 },
+      { mass: 80, friction: 0.1, restitution: 0.1 },
       scene,
     );
+
+    let lastUpdate = Date.now();
+    physicsImpostor.registerAfterPhysicsStep(() => {
+      const newPosition = sphere.position;
+      // log.debug('sphere position mutated', { newPosition });
+      const now = Date.now();
+      if (now - lastUpdate > 1000) {
+        lastUpdate = now;
+        socketRef.current.emit('update:player:position', JSON.stringify(newPosition));
+      }
+    });
+
+    sphere.physicsImpostor = physicsImpostor;
     sphere.material = getPlayerMaterial(scene, player);
     sphere.position = new BABYLON.Vector3(
       player.position.x,
@@ -177,9 +204,6 @@ export default function Game(props) {
 
     // save the player controller
     const controller = new InputController(sceneRef.current);
-    controller.addListener((data) => {
-      socketRef.current.emit('update:player:position', JSON.stringify(data));
-    });
     newClientGameState.playerController = controller;
 
     myServerGameState.players.forEach((serverPlayer) => {
@@ -212,22 +236,18 @@ export default function Game(props) {
       }
     });
     // remove players that are not in the server state but are in the client state
-    newClientGameState.players.forEach((clientPlayer) => {
+    clientGameState.players.forEach((clientPlayer) => {
       const serverPlayer = getPlayerBySocketId(myServerGameState, clientPlayer.socketId);
       if (!serverPlayer) {
         clientPlayer.mesh.dispose();
       }
     });
 
-    newClientGameState.players = newClientGameState.players.map((clientPlayer) => {
-      let newPlayer = clientPlayer;
+    newClientGameState.players = clientGameState.players.map((clientPlayer) => {
+      const newPlayer = clientPlayer;
       myServerGameState.players.forEach((serverPlayer) => {
-        if (
-          clientPlayer.socketId === serverPlayer.socketId
-          && serverPlayer.socketId !== socketRef.current.id
-        ) {
-          newPlayer = clientPlayer;
-          newPlayer.mesh.position = serverPlayer.position;
+        if (clientPlayer.socketId === serverPlayer.socketId) {
+          // newPlayer.mesh.position = serverPlayer.position;
         }
       });
       return newPlayer;
@@ -249,14 +269,14 @@ export default function Game(props) {
   };
 
   useEffect(() => {
-    log.debug('serverGameState changed', {
+    /* log.debug('serverGameState changed', {
       clientGameState, serverGameState, sceneRef, socketRef,
-    });
+    }); */
     updateGame(serverGameState);
   }, [serverGameState]);
 
   useEffect(() => {
-    const target = 'http://localhost:3001';
+    const target = process.env.REACT_GAME_SERVER;
     log.debug(`${fnName} - constructor`, {
       process,
     });
@@ -267,7 +287,7 @@ export default function Game(props) {
     mySocket.on('update', (messageString) => {
       try {
         const message = JSON.parse(messageString);
-        log.debug('update', message);
+        // log.debug('update', message);
         setServerGameState(message);
       } catch (e) {
         log.error('could not parse message', messageString);
