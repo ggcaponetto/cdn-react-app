@@ -20,14 +20,6 @@ const styleDiv = css`
   margin: 0;
   padding: 0;
 `;
-/** @jsx jsx */
-const performanceMonitorStyle = css`
-  position: fixed;
-  background: black;
-  color: white;
-  left: 0;
-  top: 0;
-`;
 
 /* eslint-disable-next-line no-unused-vars */
 export class Util {
@@ -70,6 +62,7 @@ export class Util {
   }
 }
 
+// eslint-disable-next-line no-unused-vars
 class InputController {
   constructor(scene, options = { speed: 0.2 }) {
     this.speed = options.speed;
@@ -143,137 +136,9 @@ class InputController {
 }
 
 // eslint-disable-next-line no-unused-vars
-export function Game(props) {
+export default function Game(props) {
   const fnName = 'Game';
   // eslint-disable-next-line no-unused-vars
-  const socketRef = useRef(null);
-
-  const sceneRef = useRef(null);
-  const controllerRef = useRef(null);
-  const [fps, setFps] = useState(null);
-  const performanceMonitor = useRef(null);
-
-  const [clientGameState, setClientGameState] = useState(null);
-  const [serverGameState, setServerGameState] = useState(null);
-
-  const getPlayerMaterial = (scene, player) => {
-    // Player Material
-    const material = new BABYLON.StandardMaterial('playerMaterial', scene);
-    material.diffuseColor = new BABYLON.Color3(player.color.r, player.color.g, player.color.b);
-    material.emissiveColor = new BABYLON.Color3(player.color.r, player.color.g, player.color.b);
-    return material;
-  };
-  const getPlayerMesh = (scene, player) => {
-    const sphere = BABYLON.Mesh.CreateSphere(player.socketId, 16, 3, scene);
-    const physicsImpostor = new BABYLON.PhysicsImpostor(
-      sphere,
-      BABYLON.PhysicsImpostor.SphereImpostor,
-      { mass: 80, friction: 0.1, restitution: 0.1 },
-      scene,
-    );
-
-    let lastUpdate = Date.now();
-    physicsImpostor.registerAfterPhysicsStep(() => {
-      const newPosition = sphere.position;
-      // log.debug('sphere position mutated', { newPosition });
-      const now = Date.now();
-      if (now - lastUpdate > 1000) {
-        lastUpdate = now;
-        socketRef.current.emit('update:player:position', JSON.stringify(newPosition));
-      }
-    });
-
-    sphere.physicsImpostor = physicsImpostor;
-    sphere.material = getPlayerMaterial(scene, player);
-    sphere.position = new BABYLON.Vector3(
-      player.position.x,
-      player.position.y,
-      player.position.z,
-    );
-    return sphere;
-  };
-  const getPlayerBySocketId = (gameState, id) => gameState.players
-    .filter(
-      (player) => player.socketId === id,
-    )[0] || null;
-  const syncToServerState = (scene, myServerGameState) => {
-    const initialState = {
-      players: [],
-    };
-    const newClientGameState = initialState;
-
-    // save the player controller
-    const controller = new InputController(sceneRef.current);
-    newClientGameState.playerController = controller;
-
-    myServerGameState.players.forEach((serverPlayer) => {
-      const sphere = getPlayerMesh(scene, serverPlayer);
-      newClientGameState.players.push({
-        socketId: serverPlayer.socketId,
-        mesh: sphere,
-      });
-      if (serverPlayer.socketId === socketRef.current.id) {
-        newClientGameState.playerController.addTarget(sphere);
-      }
-    });
-    setClientGameState(newClientGameState);
-  };
-  const updateClientFromServer = (scene, myServerGameState) => {
-    log.debug('updateClientFromServer', { scene, myServerGameState });
-    const newClientGameState = clientGameState;
-    // add players that are in the server state but are not in the client state
-    myServerGameState.players.forEach((serverPlayer) => {
-      const clientPlayer = getPlayerBySocketId(clientGameState, serverPlayer.socketId);
-      if (!clientPlayer) {
-        const sphere = getPlayerMesh(scene, serverPlayer);
-        newClientGameState.players.push({
-          socketId: serverPlayer.socketId,
-          mesh: sphere,
-        });
-        if (serverPlayer.socketId === socketRef.current.id) {
-          controllerRef.current.addTarget(sphere);
-        }
-      }
-    });
-    // remove players that are not in the server state but are in the client state
-    clientGameState.players.forEach((clientPlayer) => {
-      const serverPlayer = getPlayerBySocketId(myServerGameState, clientPlayer.socketId);
-      if (!serverPlayer) {
-        clientPlayer.mesh.dispose();
-      }
-    });
-
-    newClientGameState.players = clientGameState.players.map((clientPlayer) => {
-      const newPlayer = clientPlayer;
-      myServerGameState.players.forEach((serverPlayer) => {
-        if (clientPlayer.socketId === serverPlayer.socketId) {
-          // newPlayer.mesh.position = serverPlayer.position;
-        }
-      });
-      return newPlayer;
-    });
-
-    setClientGameState(newClientGameState);
-  };
-
-  const updateGame = (myServerGameState) => {
-    if (sceneRef.current && socketRef.current) {
-      if (
-        !clientGameState
-      ) {
-        syncToServerState(sceneRef.current, myServerGameState);
-      } else {
-        updateClientFromServer(sceneRef.current, myServerGameState);
-      }
-    }
-  };
-
-  useEffect(() => {
-    /* log.debug('serverGameState changed', {
-      clientGameState, serverGameState, sceneRef, socketRef,
-    }); */
-    updateGame(serverGameState);
-  }, [serverGameState]);
 
   useEffect(() => {
     const target = process.env.REACT_GAME_SERVER;
@@ -287,8 +152,7 @@ export function Game(props) {
     mySocket.on('update', (messageString) => {
       try {
         const message = JSON.parse(messageString);
-        // log.debug('update', message);
-        setServerGameState(message);
+        log.debug('update', message);
       } catch (e) {
         log.error('could not parse message', messageString);
       }
@@ -296,13 +160,11 @@ export function Game(props) {
     mySocket.on('disconnect', () => {
       log.debug('disconnected');
     });
-    socketRef.current = mySocket;
   }, []);
 
   useEffect(() => {
     const canvas = document.getElementById('renderCanvas'); // Get the canvas element
     const engine = new BABYLON.Engine(canvas, true); // Generate the BABYLON 3D engine
-    /** ***** Add the create scene function ***** */
     const createScene = function () {
       const scene = new BABYLON.Scene(engine);
       scene.clearColor = BABYLON.Color3.Purple();
@@ -310,7 +172,7 @@ export function Game(props) {
       const camera = new BABYLON.FreeCamera('Camera', new BABYLON.Vector3(0, 0, -20), scene);
       camera.attachControl(canvas, true);
       camera.checkCollisions = true;
-      camera.applyGravity = false;
+      camera.applyGravity = true;
       camera.setTarget(new BABYLON.Vector3(0, 0, 0));
 
       const light = new BABYLON.DirectionalLight('dir02', new BABYLON.Vector3(0.2, -1, 0), scene);
@@ -321,12 +183,40 @@ export function Game(props) {
 
       // Physics
       scene.enablePhysics(null, new BABYLON.CannonJSPlugin(true, 10, CANNON));
-      const staticElementsOption = {
-        mass: 0,
-        friction: 0.5,
-        restitution: 0.7,
-      };
+      // scene.enablePhysics(null, new BABYLON.OimoJSPlugin());
 
+      // Spheres
+      let y = 0;
+      for (let index = 0; index < 100; index += 1) {
+        const sphere = BABYLON.Mesh.CreateSphere('Sphere0', 16, 3, scene);
+
+        sphere.position = new BABYLON.Vector3(Math.random() * 20 - 10, y, Math.random() * 10 - 5);
+
+        shadowGenerator.addShadowCaster(sphere);
+
+        sphere.physicsImpostor = new BABYLON.PhysicsImpostor(
+          sphere, BABYLON.PhysicsImpostor.SphereImpostor, { mass: 1 }, scene,
+        );
+
+        y += 2;
+      }
+
+      // Box
+      const box0 = BABYLON.Mesh.CreateBox('Box0', 3, scene);
+      box0.position = new BABYLON.Vector3(3, 30, 0);
+
+      shadowGenerator.addShadowCaster(box0);
+
+      // Compound
+      const part0 = BABYLON.Mesh.CreateBox('part0', 3, scene);
+      part0.position = new BABYLON.Vector3(3, 30, 0);
+
+      const part1 = BABYLON.Mesh.CreateBox('part1', 3, scene);
+      part1.parent = part0; // We need a hierarchy for compound objects
+      part1.position = new BABYLON.Vector3(0, 3, 0);
+
+      shadowGenerator.addShadowCaster(part0);
+      shadowGenerator.addShadowCaster(part1);
       shadowGenerator.useBlurExponentialShadowMap = true;
       shadowGenerator.useKernelBlur = true;
       shadowGenerator.blurKernel = 32;
@@ -336,60 +226,30 @@ export function Game(props) {
       ground.scaling = new BABYLON.Vector3(100, 1, 100);
       ground.position.y = -5.0;
       ground.checkCollisions = true;
-      ground.physicsImpostor = new BABYLON.PhysicsImpostor(
-        ground,
-        BABYLON.PhysicsImpostor.BoxImpostor,
-        staticElementsOption, scene,
-      );
 
       const border0 = BABYLON.Mesh.CreateBox('border0', 1, scene);
       border0.scaling = new BABYLON.Vector3(1, 100, 100);
       border0.position.y = -5.0;
-      border0.position.x = -51.0;
+      border0.position.x = -50.0;
       border0.checkCollisions = true;
-      border0.physicsImpostor = new BABYLON.PhysicsImpostor(
-        border0,
-        BABYLON.PhysicsImpostor.BoxImpostor,
-        staticElementsOption,
-        scene,
-      );
 
       const border1 = BABYLON.Mesh.CreateBox('border1', 1, scene);
       border1.scaling = new BABYLON.Vector3(1, 100, 100);
       border1.position.y = -5.0;
-      border1.position.x = 51.0;
+      border1.position.x = 50.0;
       border1.checkCollisions = true;
-
-      border1.physicsImpostor = new BABYLON.PhysicsImpostor(
-        border1,
-        BABYLON.PhysicsImpostor.BoxImpostor,
-        staticElementsOption,
-        scene,
-      );
 
       const border2 = BABYLON.Mesh.CreateBox('border2', 1, scene);
       border2.scaling = new BABYLON.Vector3(100, 100, 1);
       border2.position.y = -5.0;
-      border2.position.z = 51.0;
+      border2.position.z = 50.0;
       border2.checkCollisions = true;
-      border2.physicsImpostor = new BABYLON.PhysicsImpostor(
-        border2,
-        BABYLON.PhysicsImpostor.BoxImpostor,
-        staticElementsOption,
-        scene,
-      );
 
       const border3 = BABYLON.Mesh.CreateBox('border3', 1, scene);
       border3.scaling = new BABYLON.Vector3(100, 100, 1);
       border3.position.y = -5.0;
-      border3.position.z = -51.0;
+      border3.position.z = -50.0;
       border3.checkCollisions = true;
-      border3.physicsImpostor = new BABYLON.PhysicsImpostor(
-        border3,
-        BABYLON.PhysicsImpostor.BoxImpostor,
-        staticElementsOption,
-        scene,
-      );
 
       const groundMat = new BABYLON.StandardMaterial('groundMat', scene);
       groundMat.diffuseColor = new BABYLON.Color3(0.5, 0.5, 0.5);
@@ -402,23 +262,47 @@ export function Game(props) {
       border3.material = groundMat;
       ground.receiveShadows = true;
 
-      // Util.showWorldAxis(scene, 5);
+      // Physics
+      box0.physicsImpostor = new BABYLON.PhysicsImpostor(
+        box0, BABYLON.PhysicsImpostor.BoxImpostor, {
+          mass: 2,
+          friction: 0.4,
+          restitution: 0.3,
+        }, scene,
+      );
+      ground.physicsImpostor = new BABYLON.PhysicsImpostor(
+        ground, BABYLON.PhysicsImpostor.BoxImpostor, {
+          mass: 0,
+          friction: 0.5,
+          restitution: 0.7,
+        }, scene,
+      );
+      border0.physicsImpostor = new BABYLON.PhysicsImpostor(
+        border0, BABYLON.PhysicsImpostor.BoxImpostor, { mass: 0 }, scene,
+      );
+      border1.physicsImpostor = new BABYLON.PhysicsImpostor(
+        border1, BABYLON.PhysicsImpostor.BoxImpostor, { mass: 0 }, scene,
+      );
+      border2.physicsImpostor = new BABYLON.PhysicsImpostor(
+        border2, BABYLON.PhysicsImpostor.BoxImpostor, { mass: 0 }, scene,
+      );
+      border3.physicsImpostor = new BABYLON.PhysicsImpostor(
+        border3, BABYLON.PhysicsImpostor.BoxImpostor, { mass: 0 }, scene,
+      );
+
+      part0.physicsImpostor = new BABYLON.PhysicsImpostor(
+        part0, BABYLON.PhysicsImpostor.BoxImpostor, {
+          mass: 2,
+          friction: 0.4,
+          restitution: 0.3,
+        }, scene,
+      );
 
       return scene;
     };
-    /** ***** End of the create scene function ***** */
-
-    const scene = createScene(); // Call the createScene function
-
-    const myPerformanceMonitor = new BABYLON.PerformanceMonitor(60);
-    myPerformanceMonitor.enable();
-    log.debug('enabled performance monitoring', myPerformanceMonitor);
-    performanceMonitor.current = myPerformanceMonitor;
-
+    const scene = createScene();
     // Register a render loop to repeatedly render the scene
     engine.runRenderLoop(() => {
-      const myFps = engine.getFps().toFixed();
-      setFps(myFps);
       scene.render();
     });
 
@@ -427,7 +311,13 @@ export function Game(props) {
       engine.resize();
     });
 
-    sceneRef.current = scene;
+    const fpsReporterHandle = setInterval(() => {
+      const myFps = engine.getFps().toFixed();
+      log.debug(`scene is running at ${myFps} fps`);
+    }, 1000);
+    return () => {
+      clearInterval(fpsReporterHandle);
+    };
   }, []);
   return (
     <div css={styleDiv}>
@@ -436,11 +326,6 @@ export function Game(props) {
         id="renderCanvas"
         touch-action="none"
       />
-      <div
-        css={performanceMonitorStyle}
-      >
-        {`${fps} fps`}
-      </div>
     </div>
   );
 }
