@@ -1,5 +1,5 @@
 // eslint-disable-next-line max-classes-per-file
-import * as BABYLON from '@babylonjs/core';
+import * as BABYLON from 'babylonjs';
 // import * as OIMO from 'oimo/build/oimo';
 import * as CANNON from 'cannon';
 
@@ -11,16 +11,24 @@ const io = require('socket.io')(http);
 const log = require('loglevel');
 
 log.setLevel(log.levels.DEBUG);
-
 const port = process.env.PORT;
 if (!port) {
   throw Error('Please define a port to run on.');
 }
+log.debug(`game server is starting on port: ${port}`);
 
 class HeadlessBabylon {
   createScene() {
     this.scene = new BABYLON.Scene(this.engine);
     this.scene.clearColor = BABYLON.Color3.Purple();
+    const camera = new BABYLON.ArcRotateCamera(
+      'Camera',
+      0,
+      0.8,
+      100,
+      BABYLON.Vector3.Zero(),
+      this.scene,
+    );
     return this.scene;
   }
 
@@ -29,10 +37,16 @@ class HeadlessBabylon {
     const scene = this.createScene(); // Call the createScene function
     // Register a render loop to repeatedly render the scene
     this.engine.runRenderLoop(() => {
-      const myFps = this.engine.getFps().toFixed();
-      log.debug(`virual scene is running at ${myFps} fps`);
       scene.render();
     });
+    this.fpsReporterHandle = setInterval(() => {
+      const myFps = this.engine.getFps().toFixed();
+      log.debug(`virual scene is running at ${myFps} fps`);
+    }, 1000);
+  }
+
+  stop() {
+    clearTimeout(this.fpsReporterHandle);
   }
 }
 
@@ -116,10 +130,20 @@ class Game {
   }
 }
 
-http.listen(port, () => {
-  log.debug(`listening on port ${port}`);
-  const babylon = new HeadlessBabylon();
-  babylon.run();
-  // const game = new Game('myGame');
-  // game.start();
-});
+function run() {
+  http.listen(port, () => {
+    log.debug(`listening on port ${port}`);
+    const babylon = new HeadlessBabylon();
+    babylon.run();
+    // const game = new Game('myGame');
+    // game.start();
+    setTimeout(() => {
+      log.log('gracefully stopping babylon.');
+      babylon.stop();
+      http.close();
+      process.exit(0);
+    }, 2 * 1000);
+  });
+}
+
+run();

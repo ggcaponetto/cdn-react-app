@@ -2,9 +2,7 @@
 
 function _typeof(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof = function _typeof(obj) { return typeof obj; }; } else { _typeof = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof(obj); }
 
-var BABYLON = _interopRequireWildcard(require("@babylonjs/core"));
-
-var CANNON = _interopRequireWildcard(require("cannon"));
+var BABYLON = _interopRequireWildcard(require("babylonjs"));
 
 function _getRequireWildcardCache() { if (typeof WeakMap !== "function") return null; var cache = new WeakMap(); _getRequireWildcardCache = function _getRequireWildcardCache() { return cache; }; return cache; }
 
@@ -34,6 +32,8 @@ function _defineProperties(target, props) { for (var i = 0; i < props.length; i+
 
 function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties(Constructor.prototype, protoProps); if (staticProps) _defineProperties(Constructor, staticProps); return Constructor; }
 
+// import * as OIMO from 'oimo/build/oimo';
+// import * as CANNON from 'cannon';
 // const { Util } = require('../../src/components/game/game');
 var app = require('express')();
 
@@ -49,6 +49,8 @@ var port = process.env.PORT;
 if (!port) {
   throw Error('Please define a port to run on.');
 }
+
+log.debug("game server is starting on port: ".concat(port));
 
 var HeadlessBabylon = /*#__PURE__*/function () {
   function HeadlessBabylon() {
@@ -190,9 +192,13 @@ var Game = /*#__PURE__*/function () {
   return Game;
 }();
 
-http.listen(port, function () {
-  log.debug("listening on port ".concat(port));
-  var babylon = new HeadlessBabylon();
-  babylon.run(); // const game = new Game('myGame');
-  // game.start();
-});
+function run() {
+  http.listen(port, function () {
+    log.debug("listening on port ".concat(port)); // const babylon = new HeadlessBabylon();
+    // babylon.run();
+    // const game = new Game('myGame');
+    // game.start();
+  });
+}
+
+run();
