@@ -35,6 +35,7 @@
     }))
     let lang = "de-ch";
     let controls = "true";
+    let moduleVersion = 2;
 
     let filterCountViewId = `open_marketsense_private_investor/filterCount`
     let filterViewId = `open_marketsense_private_investor/filter`
@@ -83,6 +84,7 @@
     mainScript.src = 'main.bundle.js?'
       + 'scriptId=sep-core'
       + '&sepEventName=' + sepEventName
+      + '&moduleVersion=' + moduleVersion
       + '&v=' + Date.now()
       + "&token=" + token
       + "&theme=" + theme
