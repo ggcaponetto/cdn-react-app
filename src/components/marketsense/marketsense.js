@@ -78,7 +78,7 @@ const getAddresses = async (props, searchString) => {
   );
   return response;
 };
-const getPublicMarketsenseData = async (props, addressId) => {
+const getPublicSEPData = async (props, addressId) => {
   const endpoints = [
     `${props.env.APIGatewayBase}/api/marketsense/addresspoint-by-addressid/${addressId}`,
     `${props.env.APIGatewayBase}/api/marketsense/emptyparcel-addresspoint-by-addressid/${addressId}`,
@@ -93,6 +93,9 @@ const getPublicMarketsenseData = async (props, addressId) => {
     `${props.env.APIGatewayBase}/api/marketsense/roof-statistics-by-parcel-by-addressid/${addressId}`,
     `${props.env.APIGatewayBase}/api/marketsense/zefix-statistics-by-egid-by-addressid/${addressId}`,
     `${props.env.APIGatewayBase}/api/marketsense/zefix-statistics-by-parcel-by-addressid/${addressId}`,
+
+    `${props.env.APIGatewayBase}/api/buildings/${addressId}/featurecollection-by-parcel`,
+    `${props.env.APIGatewayBase}/api/roof-geometries?buildingidsep=[in]${addressId}&klasse=[e]1&flaeche=[ge]15`,
   ];
   const requests = endpoints.map((endopoint) => axios({
     method: 'get',
@@ -103,7 +106,7 @@ const getPublicMarketsenseData = async (props, addressId) => {
       Authorization: `Bearer ${props.parsedUrl.token}`,
     },
   }));
-  return Promise.all(requests);
+  return Promise.allSettled(requests);
 };
 
 const useStyles = makeStyles({
@@ -539,7 +542,7 @@ export default function Marketsense(props) {
     // let addressResponse = await getAddress(props, addressId)
     const address = nearestAddresses.data[0];
     if (address) {
-      const addressData = await getPublicMarketsenseData(props, address.id);
+      const addressData = await getPublicSEPData(props, address.id);
       log.debug(`${fnName} - onSepEvent - search address changed - addressData`, { addressData, address });
 
       const myEvent = new CustomEvent(props.parsedUrl.sepEventName, {
@@ -786,6 +789,18 @@ export default function Marketsense(props) {
     const LEAFLET_MAX_NATIVE_ZOOM_LEVEL = 18;
 
     const baseLayers = {
+      MAP_OSM: {
+        url: 'https://api.mapbox.com/styles/v1/{id}/tiles/{z}/{x}/{y}?access_token=pk.eyJ1IjoibWFwYm94IiwiYSI6ImNpejY4NXVycTA2emYycXBndHRqcmZ3N3gifQ.rJcFIG214AriISLbB6B5aw',
+        options: {
+          maxZoom: 18,
+          attribution: 'Map data &copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors, '
+            + '<a href="https://creativecommons.org/licenses/by-sa/2.0/">CC-BY-SA</a>, '
+            + 'Imagery © <a href="https://www.mapbox.com/">Mapbox</a>',
+          id: 'mapbox/streets-v11',
+          tileSize: 512,
+          zoomOffset: -1,
+        },
+      },
       MAP_SWISSTOPO_GREY_URL: {
         layers: {
           MAP_SWISSTOPO_GREY_URL: {
@@ -866,26 +881,14 @@ export default function Marketsense(props) {
 
       },
     };
-    const baseLayersGroup = getLayerGroup(baseLayers.MAP_CADASTRAL_COLOR_URL);
+    const baseLayersGroup = getLayerGroup(baseLayers[`${props.parsedUrl.mapLayer}`]);
     baseLayersGroup.addTo(myMap);
   };
-  const initLeaflet = (uuid) => {
-    const myMap = L.map(`leaflet-${uuid}`, {});
-
+  const initLeaflet = (myUuid) => {
+    const myMap = L.map(`leaflet-${myUuid}`, {});
     const defaultPosition = [46.948484, 8.358491];
     const defaultZoom = 8;
     myMap.setView(defaultPosition, defaultZoom);
-
-    L.tileLayer('https://api.mapbox.com/styles/v1/{id}/tiles/{z}/{x}/{y}?access_token=pk.eyJ1IjoibWFwYm94IiwiYSI6ImNpejY4NXVycTA2emYycXBndHRqcmZ3N3gifQ.rJcFIG214AriISLbB6B5aw', {
-      maxZoom: 18,
-      attribution: 'Map data &copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors, '
-        + '<a href="https://creativecommons.org/licenses/by-sa/2.0/">CC-BY-SA</a>, '
-        + 'Imagery © <a href="https://www.mapbox.com/">Mapbox</a>',
-      id: 'mapbox/streets-v11',
-      tileSize: 512,
-      zoomOffset: -1,
-    })
-      .addTo(myMap);
     myMap.on('click', onMapClick);
     setLayer(myMap);
     return myMap;
@@ -985,19 +988,21 @@ export default function Marketsense(props) {
         return address;
       };
       const setMap = async (address) => {
-        const addressData = await getPublicMarketsenseData(props, address.id);
+        const addressData = await getPublicSEPData(props, address.id);
         log.debug(`${fnName} - onSepEvent - search address changed - address`, { addressData });
         const defaultPosition = [address.lat, address.long];
         const defaultZoom = 21;
         map.setView(defaultPosition, defaultZoom);
       };
       const drawMarker = async (address) => {
-        const marker = L.circle([address.lat, address.long], {
+        /* const marker = L.circle([address.lat, address.long], {
           color: props.theme.palette.primary.main,
           fillColor: props.theme.palette.primary.light,
           fillOpacity: 0.5,
           radius: 5,
-        }).addTo(map);
+        }).addTo(map); */
+
+        const marker = L.marker([address.lat, address.long]).addTo(map);
 
         setSearchMarker((prevMarker) => {
           if (prevMarker) {
