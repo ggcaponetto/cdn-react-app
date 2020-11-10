@@ -135,9 +135,11 @@ function SimpleCard(props) {
   const getPropValue = (locizeKey, value) => {
     if (locizeKey === 'addresspoint-by-addressid-gebKategorieShort') {
       return t(`open_marketsense:${locizeKey}-${value}`);
-    } if (locizeKey === 'districtfeatures-by-addressid-districtType') {
+    }
+    if (locizeKey === 'districtfeatures-by-addressid-districtType') {
       return t(`open_marketsense:${locizeKey}-${value}`);
-    } if (locizeKey === 'addresspoint-by-addressid-publicTransportQuality') {
+    }
+    if (locizeKey === 'addresspoint-by-addressid-publicTransportQuality') {
       return t(`open_marketsense:${locizeKey}-${value}`);
     }
     return value;
@@ -542,6 +544,7 @@ export default function Marketsense(props) {
   const [map, setMap] = useState(null);
   const [heatLayer, setHeatLayer] = useState(null);
   const [searchMarker, setSearchMarker] = useState(null);
+  const [parcelLayer, setParcelLayer] = useState(null);
   const [isLoadingOverview, setIsLoadingOverview] = useState(false);
   const [isLoadingAddressData, setIsLoadingAddressData] = useState(false);
 
@@ -554,7 +557,6 @@ export default function Marketsense(props) {
     if (address) {
       const addressData = await getPublicSEPData(props, address.id);
       log.debug(`${fnName} - onSepEvent - search address changed - addressData`, { addressData, address });
-
       const myEvent = new CustomEvent(props.parsedUrl.sepEventName, {
         detail: {
           action: `${fnName}:onMapClick`,
@@ -625,7 +627,8 @@ export default function Marketsense(props) {
             log.debug('modifyLeafletHeaders _abortLoading - zoom', { mapZoom, this: this, L });
           }
 
-          let i; let
+          let i;
+          let
             tile;
           for (i in this._tiles) {
             if (this._tiles[i].coords.z !== this._tileZoom) {
@@ -1005,28 +1008,43 @@ export default function Marketsense(props) {
   useEffect(() => {
     log.debug(`${fnName} - useEffect - [map]`, { props });
     if (props.parsedUrl && props.parsedUrl.sepEventName) {
+      const displayParcelGeometry = (addressData) => {
+        log.debug(`${fnName} displayParcelGeometry`, { addressData });
+        const parcelFeatureCollection = addressData.filter(
+          (data) => {
+            // `${props.env.APIGatewayBase}/api/buildings/29395280/featurecollection-by-parcel`
+            const replace = `${props.env.APIGatewayBase}\/api\/buildings\/[0-9]+\/featurecollection-by-parcel`;
+            const regex = new RegExp(replace, 'g');
+            const matches = !!data.config.url.match(regex);
+            return matches;
+          },
+        )[0];
+        log.debug(`${fnName} displayParcelGeometry`, { addressData, parcelFeatureCollection });
+        if (parcelFeatureCollection) {
+          const newParcelLayer = L.geoJSON(parcelFeatureCollection.data);
+          setParcelLayer((prevLayer) => {
+            if (prevLayer) {
+              map.removeLayer(prevLayer);
+            }
+            newParcelLayer.addTo(map);
+            return newParcelLayer;
+          });
+        }
+      };
+
       const getAddressById = async (addressId) => {
         const addressResponse = await getAddress(props, addressId);
         const address = addressResponse.data[0];
         return address;
       };
       const setMap = async (address) => {
-        const addressData = await getPublicSEPData(props, address.id);
-        log.debug(`${fnName} - onSepEvent - search address changed - address`, { addressData });
+        log.debug(`${fnName} - onSepEvent - search address changed - address`, { address });
         const defaultPosition = [address.lat, address.long];
         const defaultZoom = 21;
         map.setView(defaultPosition, defaultZoom);
       };
       const drawMarker = async (address) => {
-        /* const marker = L.circle([address.lat, address.long], {
-          color: props.theme.palette.primary.main,
-          fillColor: props.theme.palette.primary.light,
-          fillOpacity: 0.5,
-          radius: 5,
-        }).addTo(map); */
-
         const marker = L.marker([address.lat, address.long]).addTo(map);
-
         setSearchMarker((prevMarker) => {
           if (prevMarker) {
             map.removeLayer(prevMarker);
@@ -1044,9 +1062,11 @@ export default function Marketsense(props) {
         ) {
           log.debug(`${fnName} - onSepEvent - search address changed`, event);
           const address = await getAddressById(event.detail.payload.row.fields.id);
+          const addressData = await getPublicSEPData(props, address.id);
           setMap(address);
           drawMarker(address);
           onMapClick({ latlng: { lat: address.lat, lng: address.long } });
+          displayParcelGeometry(addressData);
           // let addresses = getNearAddresses(event.detail.objectAddress.lat, event.detail.objectAddress.long)
         }
       };
