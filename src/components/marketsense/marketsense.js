@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import ReactDOM from 'react-dom';
+import ReactDOMServer from 'react-dom/server';
 import * as L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import 'leaflet.heat/dist/leaflet-heat.js';
@@ -106,7 +107,8 @@ const getPublicSEPData = async (props, addressId) => {
       Authorization: `Bearer ${props.parsedUrl.token}`,
     },
   }));
-  return Promise.allSettled(requests);
+  const settledPromises = await Promise.allSettled(requests);
+  return settledPromises.filter((response) => response.status === 'fulfilled').map((response) => response.value);
 };
 
 const useStyles = makeStyles({
@@ -166,24 +168,27 @@ function SimpleCard(props) {
       'addresspoint-by-addressid-populationHectar', // Bevölkerungsdichte [Personen/ha]
     ];
     addressData.forEach((dataSet, dataSetIndex) => {
-      dataSet.data.forEach((data, dataIndex) => {
-        const endpointPrefix = dataSet.config.url.replace('https://services.swissenergyplanning.ch/api/marketsense/', '').split('/')[0];
-        for (const prop in data) {
-          if (
-            data.hasOwnProperty(prop)
-            && allowedPros.includes(`${endpointPrefix}-${prop}`)
-          ) {
-            rows.push(<div key={`${dataSetIndex}_${dataIndex}_${prop}`}>
-              <b>
-                {t(`open_marketsense:${endpointPrefix}-${prop}`)}
-                :
-              </b>
-              {' '}
-              {getPropValue(`${endpointPrefix}-${prop}`, data[prop])}
-                      </div>);
+      const isDataArray = Array.isArray(dataSet.data);
+      if (isDataArray) {
+        dataSet.data.forEach((data, dataIndex) => {
+          const endpointPrefix = dataSet.config.url.replace(`${props.env.APIGatewayBase}/api/marketsense/`, '').split('/')[0];
+          for (const prop in data) {
+            if (
+              data.hasOwnProperty(prop)
+              && allowedPros.includes(`${endpointPrefix}-${prop}`)
+            ) {
+              rows.push(<div key={`${dataSetIndex}_${dataIndex}_${prop}`}>
+                <b>
+                  {t(`open_marketsense:${endpointPrefix}-${prop}`)}
+                  :
+                </b>
+                {' '}
+                {getPropValue(`${endpointPrefix}-${prop}`, data[prop])}
+              </div>);
+            }
           }
-        }
-      });
+        });
+      }
     });
     return <div>{rows}</div>;
   };
@@ -278,7 +283,12 @@ function ObjectDisplay(props) {
             return <LinearProgress />;
           }
           if (object) {
-            return <SimpleCard object={object} />;
+            return (
+              <SimpleCard
+                {...props}
+                object={object}
+              />
+            );
           }
         })()}
       </div>
@@ -891,6 +901,19 @@ export default function Marketsense(props) {
     myMap.setView(defaultPosition, defaultZoom);
     myMap.on('click', onMapClick);
     setLayer(myMap);
+    const attribution = (
+      <div css={{
+        fontSize: '1.5em',
+      }}
+      >
+        powered by
+        {' '}
+        <a href="https://swissenergyplanning.ch" target="_blank" rel="noreferrer">SEP &copy;</a>
+      </div>
+    );
+    myMap.attributionControl.setPrefix(null);
+    myMap.attributionControl.setPosition('bottomleft');
+    myMap.attributionControl.addAttribution(ReactDOMServer.renderToStaticMarkup(attribution));
     return myMap;
   };
   const [filter, setFilter] = useState(null);
@@ -1060,9 +1083,14 @@ export default function Marketsense(props) {
       const uuid = uuidv4();
       setUuid(uuid);
 
-      const { filterCountViewId } = props.parsedUrl;
-      const { filterViewId } = props.parsedUrl;
-      setFilter({ filterViewId, filterCountViewId });
+      try {
+        const overview = JSON.parse(props.parsedUrl.overview);
+        const { filterCountViewId } = overview;
+        const { filterViewId } = overview;
+        setFilter({ filterViewId, filterCountViewId });
+      } catch (e) {
+        log.debug('no overview settings have been found or could be parsed', e);
+      }
 
       window.dispatchEvent(myEvent);
 
