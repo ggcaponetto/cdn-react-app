@@ -42,12 +42,14 @@
       MAP_OSM: 'MAP_OSM',
       MAP_SWISSTOPO_GREY_URL: 'MAP_SWISSTOPO_GREY_URL',
       MAP_SWISSTOPO_COLOR_URL: 'MAP_SWISSTOPO_COLOR_URL',
-      MAP_CADASTRAL_COLOR_URL: 'MAP_CADASTRAL_COLOR_URL',
-      MAP_GOOGLE_SATELLITE: 'MAP_GOOGLE_SATELLITE'
-    }.MAP_CADASTRAL_COLOR_URL
+      MAP_CADASTRAL_COLOR_URL: 'MAP_CADASTRAL_COLOR_URL'
+    }.MAP_SWISSTOPO_GREY_URL
 
     let overview = JSON.stringify(
       {
+        options: {
+          maxZoom: 15
+        },
         privateInvestor: {
           filterCountViewId: 'open_marketsense_private_investor/filterCount',
           filterViewId: 'open_marketsense_private_investor/filter'

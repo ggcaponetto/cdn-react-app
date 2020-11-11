@@ -26,6 +26,8 @@ import log from 'loglevel';
 import icon from 'leaflet/dist/images/marker-icon.png';
 import iconShadow from 'leaflet/dist/images/marker-shadow.png';
 import moment from 'moment';
+import { formatNum } from 'leaflet/src/core/Util';
+import leafletIcon from 'leaflet/dist/images/marker-icon.png';
 import styles from '../hello/hello.module.css';
 
 const DefaultIcon = L.icon({
@@ -95,7 +97,7 @@ const getPublicSEPData = async (props, addressId) => {
     `${props.env.APIGatewayBase}/api/marketsense/zefix-statistics-by-egid-by-addressid/${addressId}`,
     `${props.env.APIGatewayBase}/api/marketsense/zefix-statistics-by-parcel-by-addressid/${addressId}`,
 
-    `${props.env.APIGatewayBase}/api/buildings/${addressId}/featurecollection-by-parcel`,
+    `${props.env.APIGatewayBase}/api/addresspoints/${addressId}/featurecollection-addresspoints-parcel`,
     `${props.env.APIGatewayBase}/api/roof-geometries?buildingidsep=[in]${addressId}&klasse=[e]1&flaeche=[ge]15`,
   ];
   const requests = endpoints.map((endopoint) => axios({
@@ -547,6 +549,7 @@ export default function Marketsense(props) {
   const [parcelLayer, setParcelLayer] = useState(null);
   const [isLoadingOverview, setIsLoadingOverview] = useState(false);
   const [isLoadingAddressData, setIsLoadingAddressData] = useState(false);
+  const [filter, setFilter] = useState(null);
 
   async function onMapClick(e) {
     log.debug('clicked on map', e);
@@ -803,15 +806,19 @@ export default function Marketsense(props) {
 
     const baseLayers = {
       MAP_OSM: {
-        url: 'https://api.mapbox.com/styles/v1/{id}/tiles/{z}/{x}/{y}?access_token=pk.eyJ1IjoibWFwYm94IiwiYSI6ImNpejY4NXVycTA2emYycXBndHRqcmZ3N3gifQ.rJcFIG214AriISLbB6B5aw',
-        options: {
-          maxZoom: 18,
-          attribution: 'Map data &copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors, '
-            + '<a href="https://creativecommons.org/licenses/by-sa/2.0/">CC-BY-SA</a>, '
-            + 'Imagery © <a href="https://www.mapbox.com/">Mapbox</a>',
-          id: 'mapbox/streets-v11',
-          tileSize: 512,
-          zoomOffset: -1,
+        layers: {
+          MAP_OSM: {
+            url: 'https://api.mapbox.com/styles/v1/{id}/tiles/{z}/{x}/{y}?access_token=pk.eyJ1IjoibWFwYm94IiwiYSI6ImNpejY4NXVycTA2emYycXBndHRqcmZ3N3gifQ.rJcFIG214AriISLbB6B5aw',
+            options: {
+              maxZoom: 18,
+              attribution: 'Map data &copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors, '
+                + '<a href="https://creativecommons.org/licenses/by-sa/2.0/">CC-BY-SA</a>, '
+                + 'Imagery © <a href="https://www.mapbox.com/">Mapbox</a>',
+              id: 'mapbox/streets-v11',
+              tileSize: 512,
+              zoomOffset: -1,
+            },
+          },
         },
       },
       MAP_SWISSTOPO_GREY_URL: {
@@ -894,10 +901,19 @@ export default function Marketsense(props) {
 
       },
     };
-    const baseLayersGroup = getLayerGroup(baseLayers[`${props.parsedUrl.mapLayer}`]);
+
+    let baseLayersGroup = null;
+    if (props.parsedUrl.mapLayer === 'MAP_OSM') {
+      const osmLayer = L.tileLayer(baseLayers.MAP_OSM.layers.MAP_OSM.url, baseLayers.MAP_OSM.layers.MAP_OSM.options);
+      const layerGroup = L.layerGroup([osmLayer]);
+      baseLayersGroup = layerGroup;
+    } else {
+      baseLayersGroup = getLayerGroup(baseLayers[`${props.parsedUrl.mapLayer}`]);
+    }
     baseLayersGroup.addTo(myMap);
   };
   const initLeaflet = (myUuid) => {
+    log.debug(`${fnName} initLeaflet`, { props });
     const myMap = L.map(`leaflet-${myUuid}`, {});
     const defaultPosition = [46.948484, 8.358491];
     const defaultZoom = 8;
@@ -909,9 +925,11 @@ export default function Marketsense(props) {
         fontSize: '1.5em',
       }}
       >
-        powered by
-        {' '}
         <a href="https://swissenergyplanning.ch" target="_blank" rel="noreferrer">SEP &copy;</a>
+        {' '}
+        by
+        {' '}
+        <a href="https://geoimpact.ch" target="_blank" rel="noreferrer">geoimpact</a>
       </div>
     );
     myMap.attributionControl.setPrefix(null);
@@ -919,8 +937,6 @@ export default function Marketsense(props) {
     myMap.attributionControl.addAttribution(ReactDOMServer.renderToStaticMarkup(attribution));
     return myMap;
   };
-  const [filter, setFilter] = useState(null);
-
   const drawHeatmap = async function (map, options) {
     setIsLoadingOverview(true);
     const docs = await getPotentialsFromCloudant(filter.filterViewId, filter.filterCountViewId);
@@ -944,7 +960,6 @@ export default function Marketsense(props) {
       return myHeatLayer;
     });
   };
-
   const getPotentialsFromCloudant = async (filterViewId, filterCountViewId) => {
     const urlPublic = 'https://washeduandishestylierger:b45b00cb570a9e649f159e1745b207266bb4005a@6c2fef2d-1c79-4b48-ba34-96193c57f4dd-bluemix.cloudantnosqldb.appdomain.cloud';
     const dbName = 'sync_addr_db';
@@ -995,10 +1010,9 @@ export default function Marketsense(props) {
     const allDocs = results.reduce((acc, curr) => acc.concat(curr.rows), []);
     return allDocs;
   };
-
   useEffect(() => {
-
-  }, [heatLayer]);
+    log.debug(`${fnName} - useEffect - [map]`, { props });
+  }, [map]);
 
   useEffect(() => {
     log.debug(`${fnName} - useEffect - []`, { props });
@@ -1012,8 +1026,8 @@ export default function Marketsense(props) {
         log.debug(`${fnName} displayParcelGeometry`, { addressData });
         const parcelFeatureCollection = addressData.filter(
           (data) => {
-            // `${props.env.APIGatewayBase}/api/buildings/29395280/featurecollection-by-parcel`
-            const replace = `${props.env.APIGatewayBase}\/api\/buildings\/[0-9]+\/featurecollection-by-parcel`;
+            // `${props.env.APIGatewayBase}/api/addresspoints/29395280/featurecollection-addresspoints-parcel`
+            const replace = `${props.env.APIGatewayBase}\/api\/addresspoints\/[0-9]+\/featurecollection-addresspoints-parcel`;
             const regex = new RegExp(replace, 'g');
             const matches = !!data.config.url.match(regex);
             return matches;
@@ -1022,6 +1036,11 @@ export default function Marketsense(props) {
         log.debug(`${fnName} displayParcelGeometry`, { addressData, parcelFeatureCollection });
         if (parcelFeatureCollection) {
           const newParcelLayer = L.geoJSON(parcelFeatureCollection.data);
+          newParcelLayer.setStyle({
+            fillColor: props.theme.palette.primary.main,
+            color: props.theme.palette.primary.main,
+          });
+
           setParcelLayer((prevLayer) => {
             if (prevLayer) {
               map.removeLayer(prevLayer);
@@ -1044,13 +1063,30 @@ export default function Marketsense(props) {
         map.setView(defaultPosition, defaultZoom);
       };
       const drawMarker = async (address) => {
-        const marker = L.marker([address.lat, address.long]).addTo(map);
-        setSearchMarker((prevMarker) => {
-          if (prevMarker) {
-            map.removeLayer(prevMarker);
+        const markerIcon = L.icon({
+          iconUrl: leafletIcon,
+          iconAnchor: [12, 41],
+        });
+        const marker = L.marker([address.lat, address.long], {
+          icon: markerIcon,
+        });
+
+        /*
+        const circle = L.circle([address.lat, address.long], {
+          color: 'red',
+          fillColor: '#f03',
+          fillOpacity: 0.5,
+          radius: 10,
+        });
+        */
+
+        const layerGroup = L.layerGroup([marker]);
+        setSearchMarker((prevLayerGroup) => {
+          if (prevLayerGroup) {
+            map.removeLayer(prevLayerGroup);
           }
-          marker.addTo(map);
-          return marker;
+          layerGroup.addTo(map);
+          return layerGroup;
         });
       };
       const onSepEvent = async (event) => {
@@ -1064,9 +1100,9 @@ export default function Marketsense(props) {
           const address = await getAddressById(event.detail.payload.row.fields.id);
           const addressData = await getPublicSEPData(props, address.id);
           setMap(address);
-          drawMarker(address);
           onMapClick({ latlng: { lat: address.lat, lng: address.long } });
           displayParcelGeometry(addressData);
+          drawMarker(address);
           // let addresses = getNearAddresses(event.detail.objectAddress.lat, event.detail.objectAddress.long)
         }
       };
