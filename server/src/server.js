@@ -2,6 +2,7 @@
 import * as BABYLON from 'babylonjs';
 // import * as OIMO from 'oimo/build/oimo';
 import * as CANNON from 'cannon';
+import { createScene } from '../../src/components/game/scene.js';
 
 // const { Util } = require('../../src/components/game/game');
 
@@ -18,23 +19,9 @@ if (!port) {
 log.debug(`game server is starting on port: ${port}`);
 
 class HeadlessBabylon {
-  createScene() {
-    this.scene = new BABYLON.Scene(this.engine);
-    this.scene.clearColor = BABYLON.Color3.Purple();
-    const camera = new BABYLON.ArcRotateCamera(
-      'Camera',
-      0,
-      0.8,
-      100,
-      BABYLON.Vector3.Zero(),
-      this.scene,
-    );
-    return this.scene;
-  }
-
   run() {
     this.engine = new BABYLON.NullEngine();
-    const scene = this.createScene(); // Call the createScene function
+    const scene = createScene(); // Call the createScene function
     // Register a render loop to repeatedly render the scene
     this.engine.runRenderLoop(() => {
       scene.render();

@@ -4,6 +4,7 @@ import * as BABYLON from '@babylonjs/core/Legacy/legacy';
 import * as CANNON from 'cannon';
 import { jsx, css } from '@emotion/core';
 import * as log from 'loglevel';
+import { createScene } from './scene.js';
 
 // with ES6 import
 import io from 'socket.io-client';
@@ -139,7 +140,6 @@ class InputController {
 export default function Game(props) {
   const fnName = 'Game';
   // eslint-disable-next-line no-unused-vars
-
   useEffect(() => {
     const target = process.env.REACT_GAME_SERVER;
     log.debug(`${fnName} - constructor`, {
@@ -165,7 +165,7 @@ export default function Game(props) {
   useEffect(() => {
     const canvas = document.getElementById('renderCanvas'); // Get the canvas element
     const engine = new BABYLON.Engine(canvas, true); // Generate the BABYLON 3D engine
-    const createScene = function () {
+    /*const createScene = function () {
       const scene = new BABYLON.Scene(engine);
       scene.clearColor = BABYLON.Color3.Purple();
 
@@ -299,8 +299,8 @@ export default function Game(props) {
       );
 
       return scene;
-    };
-    const scene = createScene();
+    };*/
+    const scene = createScene(engine, canvas);
     // Register a render loop to repeatedly render the scene
     engine.runRenderLoop(() => {
       scene.render();

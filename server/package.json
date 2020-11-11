@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
+  "type": "module",
   "scripts": {
     "start": "cross-env PORT=3001 node ./dist/index.js",
     "dev": "cross-env PORT=3001 node ./node_modules/@babel/node/bin/babel-node.js --config-file ./babel.config.json ./src/index.js",
