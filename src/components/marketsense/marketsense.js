@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import ReactDOM from 'react-dom';
 import ReactDOMServer from 'react-dom/server';
 import * as L from 'leaflet';
@@ -546,7 +546,7 @@ export default function Marketsense(props) {
   const [uuid, setUuid] = useState(null);
   const [container, setContainer] = useState(null);
   const [map, setMap] = useState(null);
-  const [heatLayer, setHeatLayer] = useState(null);
+  const heatLayer = useRef(null);
   const [searchMarker, setSearchMarker] = useState(null);
   const [parcelLayer, setParcelLayer] = useState(null);
   const [buildingRoofsLayer, setBuildingRoofsLayer] = useState(null);
@@ -555,6 +555,27 @@ export default function Marketsense(props) {
   const [isLoadingAddressData, setIsLoadingAddressData] = useState(false);
   const [filter, setFilter] = useState(null);
 
+  const drawHeatmap = async function (map, options) {
+    setIsLoadingOverview(true);
+    const docs = await getPotentialsFromCloudant(filter.filterViewId, filter.filterCountViewId);
+    log.debug(`${fnName} - drawHeatmap - docs`, { docs });
+
+    const heatmapPoints = docs.map((doc) => {
+      const split = doc.value.split(',').map((value) => parseFloat(value));
+      return split;
+    });
+    log.debug(`${fnName} - drawHeatmap`, { heatmapPoints });
+    const myHeatLayer = L.heatLayer(heatmapPoints, options);
+    log.debug(`${fnName} - myHeatLayer - [map]`, { myHeatLayer, heatmapPoints });
+
+    if (heatLayer && heatLayer.current) {
+      map.removeLayer(heatLayer.current);
+    }
+
+    heatLayer.current = myHeatLayer;
+    myHeatLayer.addTo(map);
+    setIsLoadingOverview(false);
+  };
   async function onLeafletMapClick(e) {
     log.debug('clicked on map', e);
     setIsLoadingAddressData(true);
@@ -578,7 +599,30 @@ export default function Marketsense(props) {
     setIsLoadingAddressData(false);
     log.debug(`${fnName} - onSepEvent - search address changed - address`, { nearestAddresses, e });
   }
-
+  async function onLeafletZoomEnd(e) {
+    log.debug(`${fnName} onLeafletZoomEnd`, { e, props });
+    try {
+      if (props.parsedUrl.overview) {
+        const overview = JSON.parse(props.parsedUrl.overview);
+        if (overview.options && overview.options.maxZoom) {
+          const { maxZoom } = overview.options;
+          const currentZoom = e.target.getZoom();
+          if (maxZoom) {
+            log.debug(`${fnName} onLeafletZoomEnd - automatic overview hiding`, { props, currentZoom, maxZoom });
+            if (currentZoom > maxZoom) {
+              log.debug(`${fnName} onLeafletZoomEnd - hiding overview`, { props });
+              e.target.removeLayer(heatLayer.current);
+            } else {
+              log.debug(`${fnName} onLeafletZoomEnd - restoring overview`, { props });
+              e.target.addLayer(heatLayer.current);
+            }
+          }
+        }
+      }
+    } catch (error) {
+      log.warn(`${fnName} onLeafletZoomEnd - overview autohide is not configured`, error);
+    }
+  }
   const setLayer = (myMap) => {
     const modifyLeafletHeaders = () => {
       // https://github.com/Esri/esri-leaflet/issues/743
@@ -923,6 +967,7 @@ export default function Marketsense(props) {
     const defaultZoom = 8;
     myMap.setView(defaultPosition, defaultZoom);
     myMap.on('click', onLeafletMapClick);
+    myMap.on('zoomend', onLeafletZoomEnd);
     setLayer(myMap);
     const attribution = (
       <div css={{
@@ -940,29 +985,6 @@ export default function Marketsense(props) {
     myMap.attributionControl.setPosition('bottomleft');
     myMap.attributionControl.addAttribution(ReactDOMServer.renderToStaticMarkup(attribution));
     return myMap;
-  };
-  const drawHeatmap = async function (map, options) {
-    setIsLoadingOverview(true);
-    const docs = await getPotentialsFromCloudant(filter.filterViewId, filter.filterCountViewId);
-    log.debug(`${fnName} - drawHeatmap - docs`, { docs });
-
-    const heatmapPoints = docs.map((doc) => {
-      const split = doc.value.split(',').map((value) => parseFloat(value));
-      return split;
-    });
-    log.debug(`${fnName} - drawHeatmap`, { heatmapPoints });
-    const myHeatLayer = L.heatLayer(heatmapPoints, options);
-    log.debug(`${fnName} - myHeatLayer - [map]`, { myHeatLayer, heatmapPoints });
-
-    if (heatLayer) {
-      map.removeLayer(heatLayer);
-    }
-
-    setHeatLayer(() => {
-      myHeatLayer.addTo(map);
-      setIsLoadingOverview(false);
-      return myHeatLayer;
-    });
   };
   const getPotentialsFromCloudant = async (filterViewId, filterCountViewId) => {
     const urlPublic = 'https://washeduandishestylierger:b45b00cb570a9e649f159e1745b207266bb4005a@6c2fef2d-1c79-4b48-ba34-96193c57f4dd-bluemix.cloudantnosqldb.appdomain.cloud';
@@ -1014,6 +1036,7 @@ export default function Marketsense(props) {
     const allDocs = results.reduce((acc, curr) => acc.concat(curr.rows), []);
     return allDocs;
   };
+
   useEffect(() => {
     log.debug(`${fnName} - useEffect - [map]`, { props });
   }, [map]);

@@ -47,12 +47,12 @@
 
     let overview = JSON.stringify(
       {
-        options: {
-          maxZoom: 15
-        },
         privateInvestor: {
           filterCountViewId: 'open_marketsense_private_investor/filterCount',
-          filterViewId: 'open_marketsense_private_investor/filter'
+          filterViewId: 'open_marketsense_private_investor/filter',
+          options: {
+            maxZoom: 15
+          }
         }
       }.privateInvestor
     )
