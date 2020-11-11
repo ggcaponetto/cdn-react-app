@@ -58,7 +58,7 @@
     )
 
     window.addEventListener(sepEventName, (e) => {
-      console.log('host: got event', { action: e.detail.action })
+      console.log('host: got event', { action: e.detail.action, payload: e.detail.payload })
       if (e.detail.action === 'loaded-marketsense') {
         window.dispatchEvent(new CustomEvent(sepEventName, {
           detail: {

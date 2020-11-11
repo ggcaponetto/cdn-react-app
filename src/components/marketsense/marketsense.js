@@ -29,6 +29,7 @@ import moment from 'moment';
 import { formatNum } from 'leaflet/src/core/Util';
 import leafletIcon from 'leaflet/dist/images/marker-icon.png';
 import styles from '../hello/hello.module.css';
+import { add } from '../hello/hello-split';
 
 const DefaultIcon = L.icon({
   iconUrl: icon,
@@ -98,7 +99,8 @@ const getPublicSEPData = async (props, addressId) => {
     `${props.env.APIGatewayBase}/api/marketsense/zefix-statistics-by-parcel-by-addressid/${addressId}`,
 
     `${props.env.APIGatewayBase}/api/addresspoints/${addressId}/featurecollection-addresspoints-parcel`,
-    `${props.env.APIGatewayBase}/api/roof-geometries?buildingidsep=[in]${addressId}&klasse=[e]1&flaeche=[ge]15`,
+    `${props.env.APIGatewayBase}/api/addresspoints/${addressId}/featurecollection-roofs-parcelbuilding?minflaeche=10`,
+    `${props.env.APIGatewayBase}/api/addresspoints/${addressId}/featurecollection-roofs-allparcelbuildings?minflaeche=10`,
   ];
   const requests = endpoints.map((endopoint) => axios({
     method: 'get',
@@ -547,11 +549,13 @@ export default function Marketsense(props) {
   const [heatLayer, setHeatLayer] = useState(null);
   const [searchMarker, setSearchMarker] = useState(null);
   const [parcelLayer, setParcelLayer] = useState(null);
+  const [buildingRoofsLayer, setBuildingRoofsLayer] = useState(null);
+  const [parcelRoofsLayer, setParcelRoofsLayer] = useState(null);
   const [isLoadingOverview, setIsLoadingOverview] = useState(false);
   const [isLoadingAddressData, setIsLoadingAddressData] = useState(false);
   const [filter, setFilter] = useState(null);
 
-  async function onMapClick(e) {
+  async function onLeafletMapClick(e) {
     log.debug('clicked on map', e);
     setIsLoadingAddressData(true);
     const nearestAddresses = await getNearAddresses(props, e.latlng.lat, e.latlng.lng);
@@ -918,7 +922,7 @@ export default function Marketsense(props) {
     const defaultPosition = [46.948484, 8.358491];
     const defaultZoom = 8;
     myMap.setView(defaultPosition, defaultZoom);
-    myMap.on('click', onMapClick);
+    myMap.on('click', onLeafletMapClick);
     setLayer(myMap);
     const attribution = (
       <div css={{
@@ -1050,19 +1054,63 @@ export default function Marketsense(props) {
           });
         }
       };
+      const displayBuildingRoofsGeometry = (addressData) => {
+        log.debug(`${fnName} displayBuildingRoofsGeometry`, { addressData });
+        const buildingRoofsFeatureCollection = addressData.filter(
+          (data) => {
+            // `${props.env.APIGatewayBase}/api/addresspoints/29395280/featurecollection-roofs-parcelbuilding-addresspoints-parcel`
+            const replace = `${props.env.APIGatewayBase}\/api\/addresspoints\/[0-9]+\/featurecollection-roofs-parcelbuilding[.]*`;
+            const regex = new RegExp(replace, 'g');
+            const matches = !!data.config.url.match(regex);
+            return matches;
+          },
+        )[0];
+        log.debug(`${fnName} displayBuildingRoofsGeometry`, { addressData, buildingRoofsFeatureCollection });
+        if (buildingRoofsFeatureCollection) {
+          const newBuildingRoofsLayer = L.geoJSON(buildingRoofsFeatureCollection.data);
+          newBuildingRoofsLayer.setStyle({
+            fillColor: props.theme.palette.secondary.main,
+            color: props.theme.palette.secondary.main,
+          });
 
-      const getAddressById = async (addressId) => {
-        const addressResponse = await getAddress(props, addressId);
-        const address = addressResponse.data[0];
-        return address;
+          setBuildingRoofsLayer((prevLayer) => {
+            if (prevLayer) {
+              map.removeLayer(prevLayer);
+            }
+            newBuildingRoofsLayer.addTo(map);
+            return newBuildingRoofsLayer;
+          });
+        }
       };
-      const setMap = async (address) => {
-        log.debug(`${fnName} - onSepEvent - search address changed - address`, { address });
-        const defaultPosition = [address.lat, address.long];
-        const defaultZoom = 21;
-        map.setView(defaultPosition, defaultZoom);
+      const displayParcelRoofsGeometry = (addressData) => {
+        log.debug(`${fnName} displayParcelRoofsGeometry`, { addressData });
+        const parcelRoofsFeatureCollection = addressData.filter(
+          (data) => {
+            // `${props.env.APIGatewayBase}/api/addresspoints/29395280/featurecollection-roofs-parcelbuilding-addresspoints-parcel`
+            const replace = `${props.env.APIGatewayBase}\/api\/addresspoints\/[0-9]+\/featurecollection-roofs-parcelbuilding[.]*`;
+            const regex = new RegExp(replace, 'g');
+            const matches = !!data.config.url.match(regex);
+            return matches;
+          },
+        )[0];
+        log.debug(`${fnName} displayParcelRoofsGeometry`, { addressData, parcelRoofsFeatureCollection });
+        if (parcelRoofsFeatureCollection) {
+          const newParcelRoofsLayer = L.geoJSON(parcelRoofsFeatureCollection.data);
+          newParcelRoofsLayer.setStyle({
+            fillColor: props.theme.palette.secondary.main,
+            color: props.theme.palette.secondary.main,
+          });
+
+          setParcelRoofsLayer((prevLayer) => {
+            if (prevLayer) {
+              map.removeLayer(prevLayer);
+            }
+            newParcelRoofsLayer.addTo(map);
+            return newParcelRoofsLayer;
+          });
+        }
       };
-      const drawMarker = async (address) => {
+      const displayMarker = async (address) => {
         const markerIcon = L.icon({
           iconUrl: leafletIcon,
           iconAnchor: [12, 41],
@@ -1089,8 +1137,37 @@ export default function Marketsense(props) {
           return layerGroup;
         });
       };
+
+      const getAddressById = async (addressId) => {
+        const addressResponse = await getAddress(props, addressId);
+        const address = addressResponse.data[0];
+        return address;
+      };
+      const setMap = async (address) => {
+        log.debug(`${fnName} - onSepEvent - search address changed - address`, { address });
+        const defaultPosition = [address.lat, address.long];
+        const defaultZoom = 21;
+        map.setView(defaultPosition, defaultZoom);
+      };
+
       const onSepEvent = async (event) => {
         log.debug(`${fnName} - onSepEvent`, event);
+        const draw = (address, addressData) => {
+          displayParcelGeometry(addressData);
+          displayBuildingRoofsGeometry(addressData);
+          // displayParcelRoofsGeometry(addressData);
+          displayMarker(address);
+          // let addresses = getNearAddresses(event.detail.objectAddress.lat, event.detail.objectAddress.long)
+        };
+        const dispatchGlobalEvent = (data) => {
+          const myEvent = new CustomEvent(props.parsedUrl.sepEventName, {
+            detail: {
+              action: 'marketsense-data-changed',
+              payload: data,
+            },
+          });
+          window.dispatchEvent(myEvent);
+        };
         if (
           event.detail
           && event.detail.action === 'AddressSearch:onObjectAddressChange'
@@ -1100,10 +1177,21 @@ export default function Marketsense(props) {
           const address = await getAddressById(event.detail.payload.row.fields.id);
           const addressData = await getPublicSEPData(props, address.id);
           setMap(address);
-          onMapClick({ latlng: { lat: address.lat, lng: address.long } });
-          displayParcelGeometry(addressData);
-          drawMarker(address);
-          // let addresses = getNearAddresses(event.detail.objectAddress.lat, event.detail.objectAddress.long)
+          draw(address, addressData);
+          dispatchGlobalEvent({ address, addressData });
+        }
+        if (
+          event.detail
+          && event.detail.action === 'Marketsense:onMapClick'
+          && event.detail.payload
+        ) {
+          log.debug(`${fnName} - onSepEvent - map click`, event);
+          const address = await getAddressById(event.detail.payload.address.id);
+          const addressData = await getPublicSEPData(props, address.id);
+          // do not set the map position and zoom if the user interacts with the map
+          // setMap(address);
+          draw(address, addressData);
+          dispatchGlobalEvent({ address, addressData });
         }
       };
       window.addEventListener(props.parsedUrl.sepEventName, onSepEvent);
