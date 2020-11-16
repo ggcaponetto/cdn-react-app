@@ -1061,7 +1061,7 @@ export default function Marketsense(props) {
         const parcelFeatureCollection = addressData.filter(
           (data) => {
             // `${props.env.APIGatewayBase}/api/addresspoints/29395280/featurecollection-addresspoints-parcel`
-            const replace = `${props.env.APIGatewayBase}\/api\/addresspoints\/[0-9]+\/featurecollection-addresspoints-parcel`;
+            const replace = `${props.env.APIGatewayBase}/api/addresspoints/[0-9]+/featurecollection-addresspoints-parcel`;
             const regex = new RegExp(replace, 'g');
             const matches = !!data.config.url.match(regex);
             return matches;
@@ -1089,7 +1089,7 @@ export default function Marketsense(props) {
         const buildingRoofsFeatureCollection = addressData.filter(
           (data) => {
             // `${props.env.APIGatewayBase}/api/addresspoints/29395280/featurecollection-roofs-parcelbuilding-addresspoints-parcel`
-            const replace = `${props.env.APIGatewayBase}\/api\/addresspoints\/[0-9]+\/featurecollection-roofs-parcelbuilding[.]*`;
+            const replace = `${props.env.APIGatewayBase}/api/addresspoints/[0-9]+/featurecollection-roofs-parcelbuilding[.]*`;
             const regex = new RegExp(replace, 'g');
             const matches = !!data.config.url.match(regex);
             return matches;
@@ -1128,7 +1128,7 @@ export default function Marketsense(props) {
         const parcelRoofsFeatureCollection = addressData.filter(
           (data) => {
             // `${props.env.APIGatewayBase}/api/addresspoints/29395280/featurecollection-roofs-parcelbuilding-addresspoints-parcel`
-            const replace = `${props.env.APIGatewayBase}\/api\/addresspoints\/[0-9]+\/featurecollection-roofs-parcelbuilding[.]*`;
+            const replace = `${props.env.APIGatewayBase}/api/addresspoints/[0-9]+/featurecollection-roofs-parcelbuilding[.]*`;
             const regex = new RegExp(replace, 'g');
             const matches = !!data.config.url.match(regex);
             return matches;
