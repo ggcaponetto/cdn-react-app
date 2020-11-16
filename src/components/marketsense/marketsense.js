@@ -301,6 +301,7 @@ function ObjectDisplay(props) {
               />
             );
           }
+          return null;
         })()}
       </div>
     ), container);
@@ -372,6 +373,7 @@ function AddressSearch(props) {
         window.removeEventListener(props.parsedUrl.sepEventName, onSepEvent);
       };
     }
+    return () => {};
   }, [props.parsedUrl]);
 
   useEffect(() => {
@@ -498,15 +500,21 @@ function AddressSearch(props) {
           fullWidth
           options={objectAddressResults}
           getOptionLabel={(option) => option.title}
-          value={objectAddressResults.filter((option, index) => option.title === objectAddress && objectAddress.title)[0]}
+          value={
+            objectAddressResults
+              .filter((option) => option.title === objectAddress && objectAddress.title)[0]
+          }
           getOptionSelected={(option, value) => {
             log.log('autocomplete - getOptionSelected', { option, value });
             return option.title === value.title;
           }}
           onChange={(event, value) => {
             event.persist();
-            log.log('autocomplete - onChange', { event, objectAddressResults });
-            const address = objectAddressResults.filter((option, index) => index === parseInt(event.target.dataset.optionIndex))[0];
+            log.log('autocomplete - onChange', { event, objectAddressResults, value });
+            const address = objectAddressResults
+              .filter(
+                (option, index) => index === parseInt(event.target.dataset.optionIndex, 10),
+              )[0];
             if (address) {
               log.log('autocomplete - onChange - address', { address, objectAddress });
               setObjectAddress(address);
@@ -517,7 +525,7 @@ function AddressSearch(props) {
             const debounced = debounce(onInputChange, 300, { leading: true });
             debounced(value);
 
-            const address = objectAddressResults.filter((option, index) => option.title === value)[0];
+            const address = objectAddressResults.filter((option) => option.title === value)[0];
             log.log('autocomplete - onInputChange - address', { objectAddressResults, value });
             if (address) {
               setObjectAddress(address);
@@ -547,20 +555,75 @@ function AddressSearch(props) {
 
 export default function Marketsense(props) {
   const fnName = 'Marketsense';
-  const { t, i18n } = useTranslation('open_marketsense', { useSuspense: true });
+  const { /* t, i18n */ } = useTranslation('open_marketsense', { useSuspense: true });
   const [uuid, setUuid] = useState(null);
   const [container, setContainer] = useState(null);
   const [map, setMap] = useState(null);
   const heatLayer = useRef(null);
+  // eslint-disable-next-line no-unused-vars
   const [searchMarker, setSearchMarker] = useState(null);
+  // eslint-disable-next-line no-unused-vars
   const [parcelLayer, setParcelLayer] = useState(null);
+  // eslint-disable-next-line no-unused-vars
   const [buildingRoofsLayer, setBuildingRoofsLayer] = useState(null);
+  // eslint-disable-next-line no-unused-vars
   const [parcelRoofsLayer, setParcelRoofsLayer] = useState(null);
   const [isLoadingOverview, setIsLoadingOverview] = useState(false);
   const [isLoadingAddressData, setIsLoadingAddressData] = useState(false);
   const [filter, setFilter] = useState(null);
 
-  const drawHeatmap = async function (map, options) {
+  const getPotentialsFromCloudant = async (filterViewId, filterCountViewId) => {
+    const urlPublic = 'https://washeduandishestylierger:b45b00cb570a9e649f159e1745b207266bb4005a@6c2fef2d-1c79-4b48-ba34-96193c57f4dd-bluemix.cloudantnosqldb.appdomain.cloud';
+    const dbName = 'sync_addr_db';
+
+    const remoteDB = new PouchDB(`${urlPublic}/${dbName}`);
+
+    let docsCount = 0;
+    docsCount = await remoteDB.query(filterCountViewId, {}).then((result) => {
+      // handle result
+      log.debug(`${fnName} getPotentialsFromCloudant - result`, result);
+      let docsCount = 0;
+      if (typeof result.rows[0] !== 'undefined') {
+        docsCount = result.rows[0].value;
+      }
+      return docsCount;
+    }).catch((e) => {
+      log.warn(`${fnName} getPotentialsFromCloudant - result`, { e });
+      return 0;
+    });
+    log.warn(`${fnName} getPotentialsFromCloudant - docsCount`, { docsCount });
+
+    const chunkSize = 500 * 1000;
+    const results = [];
+
+    for (let i = 0; i < docsCount; i += chunkSize) {
+      const percentage = (i / docsCount) * 100;
+      log.debug(`${fnName} getPotentialsFromCloudant - progress ${percentage}`, {
+        percentage,
+      });
+      const result = await remoteDB.query(filterViewId, {
+        limit: chunkSize,
+        skip: i,
+      }).catch((e) => {
+        log.debug(`${fnName} getPotentialsFromCloudant - query error`, {
+          e,
+          chunkSize,
+          docsCount,
+        });
+        throw e;
+      });
+      results.push(result);
+      log.debug(`${fnName} getPotentialsFromCloudant - results`, {
+        results,
+        docsCount,
+      });
+    }
+
+    const allDocs = results.reduce((acc, curr) => acc.concat(curr.rows), []);
+    return allDocs;
+  };
+
+  const drawHeatmap = async function (myMap, options) {
     setIsLoadingOverview(true);
     const docs = await getPotentialsFromCloudant(filter.filterViewId, filter.filterCountViewId);
     log.debug(`${fnName} - drawHeatmap - docs`, { docs });
@@ -574,11 +637,11 @@ export default function Marketsense(props) {
     log.debug(`${fnName} - myHeatLayer - [map]`, { myHeatLayer, heatmapPoints });
 
     if (heatLayer && heatLayer.current) {
-      map.removeLayer(heatLayer.current);
+      myMap.removeLayer(heatLayer.current);
     }
 
     heatLayer.current = myHeatLayer;
-    myHeatLayer.addTo(map);
+    myHeatLayer.addTo(myMap);
     setIsLoadingOverview(false);
   };
   async function onLeafletMapClick(e) {
@@ -990,56 +1053,6 @@ export default function Marketsense(props) {
     myMap.attributionControl.setPosition('bottomleft');
     myMap.attributionControl.addAttribution(ReactDOMServer.renderToStaticMarkup(attribution));
     return myMap;
-  };
-  const getPotentialsFromCloudant = async (filterViewId, filterCountViewId) => {
-    const urlPublic = 'https://washeduandishestylierger:b45b00cb570a9e649f159e1745b207266bb4005a@6c2fef2d-1c79-4b48-ba34-96193c57f4dd-bluemix.cloudantnosqldb.appdomain.cloud';
-    const dbName = 'sync_addr_db';
-
-    const remoteDB = new PouchDB(`${urlPublic}/${dbName}`);
-
-    let docsCount = 0;
-    docsCount = await remoteDB.query(filterCountViewId, {}).then((result) => {
-      // handle result
-      log.debug(`${fnName} getPotentialsFromCloudant - result`, result);
-      let docsCount = 0;
-      if (typeof result.rows[0] !== 'undefined') {
-        docsCount = result.rows[0].value;
-      }
-      return docsCount;
-    }).catch((e) => {
-      log.warn(`${fnName} getPotentialsFromCloudant - result`, { e });
-      return 0;
-    });
-    log.warn(`${fnName} getPotentialsFromCloudant - docsCount`, { docsCount });
-
-    const chunkSize = 500 * 1000;
-    const results = [];
-
-    for (let i = 0; i < docsCount; i += chunkSize) {
-      const percentage = (i / docsCount) * 100;
-      log.debug(`${fnName} getPotentialsFromCloudant - progress ${percentage}`, {
-        percentage,
-      });
-      const result = await remoteDB.query(filterViewId, {
-        limit: chunkSize,
-        skip: i,
-      }).catch((e) => {
-        log.debug(`${fnName} getPotentialsFromCloudant - query error`, {
-          e,
-          chunkSize,
-          docsCount,
-        });
-        throw e;
-      });
-      results.push(result);
-      log.debug(`${fnName} getPotentialsFromCloudant - results`, {
-        results,
-        docsCount,
-      });
-    }
-
-    const allDocs = results.reduce((acc, curr) => acc.concat(curr.rows), []);
-    return allDocs;
   };
 
   useEffect(() => {
