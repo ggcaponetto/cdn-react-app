@@ -1,3 +1,4 @@
+/* eslint-disable */
 function filter_trans_manager(doc) {
   if (
     doc.addr_anzahlwohnungen_parcel >= 30

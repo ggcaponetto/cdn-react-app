@@ -3,7 +3,7 @@ import ReactDOM from 'react-dom';
 import ReactDOMServer from 'react-dom/server';
 import * as L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import 'leaflet.heat/dist/leaflet-heat.js';
+import 'leaflet.heat/dist/leaflet-heat';
 import { v4 as uuidv4 } from 'uuid';
 import {
   Button, TextField, CircularProgress, LinearProgress,
@@ -23,16 +23,11 @@ import { useTranslation } from 'react-i18next';
 import { jsx } from '@emotion/core';
 import log from 'loglevel';
 
-import icon from 'leaflet/dist/images/marker-icon.png';
 import iconShadow from 'leaflet/dist/images/marker-shadow.png';
-import moment from 'moment';
-import { formatNum } from 'leaflet/src/core/Util';
 import leafletIcon from 'leaflet/dist/images/marker-icon.png';
-import styles from '../hello/hello.module.css';
-import { add } from '../hello/hello-split';
 
 const DefaultIcon = L.icon({
-  iconUrl: icon,
+  iconUrl: leafletIcon,
   shadowUrl: iconShadow,
 });
 L.Marker.prototype.options.icon = DefaultIcon;
@@ -132,10 +127,19 @@ const useStyles = makeStyles({
   },
 });
 
+const roofColors = [
+  '#192f9f',
+  '#00c5ff',
+  '#ffaa01',
+  '#ff5501',
+  '#a80000', // dark red
+  '#ffffff',
+];
+
 function SimpleCard(props) {
   const fnName = 'SimpleCard';
   const classes = useStyles();
-  const { t, i18n } = useTranslation('open_marketsense', { useSuspense: true });
+  const { t/* , i18n */ } = useTranslation('open_marketsense', { useSuspense: true });
   const getPropValue = (locizeKey, value) => {
     if (locizeKey === 'addresspoint-by-addressid-gebKategorieShort') {
       return t(`open_marketsense:${locizeKey}-${value}`);
@@ -178,19 +182,22 @@ function SimpleCard(props) {
       if (isDataArray) {
         dataSet.data.forEach((data, dataIndex) => {
           const endpointPrefix = dataSet.config.url.replace(`${props.env.APIGatewayBase}/api/marketsense/`, '').split('/')[0];
+
           for (const prop in data) {
             if (
               data.hasOwnProperty(prop)
               && allowedPros.includes(`${endpointPrefix}-${prop}`)
             ) {
-              rows.push(<div key={`${dataSetIndex}_${dataIndex}_${prop}`}>
-                <b>
-                  {t(`open_marketsense:${endpointPrefix}-${prop}`)}
-                  :
-                </b>
-                {' '}
-                {getPropValue(`${endpointPrefix}-${prop}`, data[prop])}
-              </div>);
+              rows.push(
+                <div key={`${dataSetIndex}_${dataIndex}_${prop}`}>
+                  <b>
+                    {t(`open_marketsense:${endpointPrefix}-${prop}`)}
+                    :
+                  </b>
+                  {' '}
+                  {getPropValue(`${endpointPrefix}-${prop}`, data[prop])}
+                </div>,
+              );
             }
           }
         });
@@ -1090,11 +1097,22 @@ export default function Marketsense(props) {
         )[0];
         log.debug(`${fnName} displayBuildingRoofsGeometry`, { addressData, buildingRoofsFeatureCollection });
         if (buildingRoofsFeatureCollection) {
-          const newBuildingRoofsLayer = L.geoJSON(buildingRoofsFeatureCollection.data);
-          newBuildingRoofsLayer.setStyle({
+          const newBuildingRoofsLayer = L.geoJSON(buildingRoofsFeatureCollection.data, {
+            style(feature) {
+              try {
+                return {
+                  color: roofColors[feature.properties.klasse - 1],
+                };
+              } catch (e) {
+                log.debug(`${fnName} cannot set the roof color based on the roof class`, { addressData, buildingRoofsFeatureCollection });
+              }
+            },
+          });
+
+          /*          newBuildingRoofsLayer.setStyle({
             fillColor: props.theme.palette.secondary.main,
             color: props.theme.palette.secondary.main,
-          });
+          }); */
 
           setBuildingRoofsLayer((prevLayer) => {
             if (prevLayer) {
@@ -1118,10 +1136,16 @@ export default function Marketsense(props) {
         )[0];
         log.debug(`${fnName} displayParcelRoofsGeometry`, { addressData, parcelRoofsFeatureCollection });
         if (parcelRoofsFeatureCollection) {
-          const newParcelRoofsLayer = L.geoJSON(parcelRoofsFeatureCollection.data);
-          newParcelRoofsLayer.setStyle({
-            fillColor: props.theme.palette.secondary.main,
-            color: props.theme.palette.secondary.main,
+          const newParcelRoofsLayer = L.geoJSON(parcelRoofsFeatureCollection.data, {
+            style(feature) {
+              try {
+                return {
+                  color: roofColors[feature.properties.klasse - 1],
+                };
+              } catch (e) {
+                log.debug(`${fnName} cannot set the roof color based on the roof class`, { addressData, buildingRoofsFeatureCollection });
+              }
+            },
           });
 
           setParcelRoofsLayer((prevLayer) => {

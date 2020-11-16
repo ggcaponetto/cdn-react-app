@@ -49,7 +49,7 @@ const getParsedUrl = () => {
   }
 };
 
-function App(props) {
+function App() {
   const fnName = 'App';
   const { t, i18n } = useTranslation('main', { useSuspense: false });
   const [appProps, setAppProps] = useState({
@@ -58,28 +58,24 @@ function App(props) {
     },
   });
 
-  useEffect(() => {
-    const url = new URL(script.src);
-    const parsedUrl = getParsedUrl();
-    log.debug(`${fnName} - constructor`, {
-      url, parsedUrl, appProps, t, i18n,
-    });
-    setAppProps((appProps) => ({
-      ...appProps,
-      parsedUrl,
-      theme: getTheme(parsedUrl),
-    }));
-    if (parsedUrl.lang) {
-      i18n.changeLanguage(parsedUrl.lang);
-    }
-    const myEvent = new CustomEvent(parsedUrl.sepEventName, {
-      detail: {
-        action: 'loaded-app',
-        payload: true,
+  const getDefaultTheme = () => {
+    const defaultTheme = {
+      palette: {
+        primary: {
+          main: '#689F38',
+        },
+        secondary: {
+          main: '#0e72b5',
+        },
       },
-    });
-    window.dispatchEvent(myEvent);
-  }, []);
+    };
+    let theme = null;
+    theme = createMuiTheme(
+      defaultTheme,
+    );
+    log.debug(`${fnName} - getTheme - no override`, { defaultTheme, theme });
+    return theme;
+  };
 
   const getTheme = (parsedUrl) => {
     const defaultTheme = {
@@ -107,24 +103,29 @@ function App(props) {
     }
     return theme;
   };
-  const getDefaultTheme = () => {
-    const defaultTheme = {
-      palette: {
-        primary: {
-          main: '#689F38',
-        },
-        secondary: {
-          main: '#0e72b5',
-        },
+
+  useEffect(() => {
+    const url = new URL(script.src);
+    const parsedUrl = getParsedUrl();
+    log.debug(`${fnName} - constructor`, {
+      url, parsedUrl, appProps, t, i18n,
+    });
+    setAppProps((prevAppProps) => ({
+      ...prevAppProps,
+      parsedUrl,
+      theme: getTheme(parsedUrl),
+    }));
+    if (parsedUrl.lang) {
+      i18n.changeLanguage(parsedUrl.lang);
+    }
+    const myEvent = new CustomEvent(parsedUrl.sepEventName, {
+      detail: {
+        action: 'loaded-app',
+        payload: true,
       },
-    };
-    let theme = null;
-    theme = createMuiTheme(
-      defaultTheme,
-    );
-    log.debug(`${fnName} - getTheme - no override`, { defaultTheme, theme });
-    return theme;
-  };
+    });
+    window.dispatchEvent(myEvent);
+  }, []);
 
   const getComponent = () => {
     if (appProps) {
