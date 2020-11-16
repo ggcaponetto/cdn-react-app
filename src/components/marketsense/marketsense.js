@@ -183,23 +183,20 @@ function SimpleCard(props) {
         dataSet.data.forEach((data, dataIndex) => {
           const endpointPrefix = dataSet.config.url.replace(`${props.env.APIGatewayBase}/api/marketsense/`, '').split('/')[0];
 
-          for (const prop in data) {
-            if (
-              data.hasOwnProperty(prop)
-              && allowedPros.includes(`${endpointPrefix}-${prop}`)
-            ) {
+          Object.entries(data).forEach(((key, value) => {
+            if (allowedPros.includes(`${endpointPrefix}-${key}`)) {
               rows.push(
-                <div key={`${dataSetIndex}_${dataIndex}_${prop}`}>
+                <div key={`${dataSetIndex}_${dataIndex}_${key}`}>
                   <b>
-                    {t(`open_marketsense:${endpointPrefix}-${prop}`)}
+                    {t(`open_marketsense:${endpointPrefix}-${key}`)}
                     :
                   </b>
                   {' '}
-                  {getPropValue(`${endpointPrefix}-${prop}`, data[prop])}
+                  {getPropValue(`${endpointPrefix}-${key}`, value)}
                 </div>,
               );
             }
-          }
+          }));
         });
       }
     });
@@ -282,6 +279,7 @@ function ObjectDisplay(props) {
         window.removeEventListener(props.parsedUrl.sepEventName, onSepEvent);
       };
     }
+    return () => {};
   }, [props.parsedUrl]);
 
   useEffect(() => {
