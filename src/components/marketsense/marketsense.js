@@ -136,6 +136,191 @@ const roofColors = [
   '#ffffff',
 ];
 
+const modifyLeafletHeaders = function modifyLeafletHeaders() {
+  // https://github.com/Esri/esri-leaflet/issues/743
+  L.TileLayer.WMS_Headers = L.TileLayer.WMS.extend({
+    setUrl(url, noRedraw) {
+      let myNoRedraw = noRedraw;
+      if (this._url === url && noRedraw === undefined) {
+        myNoRedraw = true;
+      }
+
+      this._url = url;
+
+      if (!myNoRedraw) {
+        this.redraw();
+      }
+      return this;
+    },
+    _removeTile(key) {
+      log.debug('modifyLeafletHeaders _removeTile', { key, this: this, L });
+      const tile = this._tiles[key];
+      if (!tile) {
+        log.debug('modifyLeafletHeaders _removeTile - no tile', {
+          key, tile, this: this, L,
+        });
+        return null;
+      }
+      // Cancels any pending http requests associated with the tile
+      // unless we're on Android's stock browser,
+      // see https://github.com/Leaflet/Leaflet/issues/137
+      if (!L.Browser.androidStock) {
+        log.debug('modifyLeafletHeaders _removeTile - android', {
+          key, tile, this: this, L,
+        });
+        tile.el.setAttribute('src', L.Util.emptyImageUrl);
+      }
+      return L.GridLayer.prototype._removeTile.call(this, key);
+    },
+    _tileOnError(done, tile, e) {
+      const myTile = tile;
+      log.debug('modifyLeafletHeaders _tileOnError', {
+        done, tile, e, this: this, L,
+      });
+      const errorUrl = this.options.errorTileUrl;
+      if (errorUrl && tile.getAttribute('src') !== errorUrl) {
+        myTile.src = errorUrl;
+      }
+      done(e, tile);
+    },
+    _abortLoading() {
+      log.debug('modifyLeafletHeaders _abortLoading', { this: this, L });
+      const mapZoom = this._map._zoom;
+      if (
+        mapZoom >= 18
+      ) {
+        log.debug('modifyLeafletHeaders _abortLoading - zoom', { mapZoom, this: this, L });
+      }
+
+      let i;
+      let
+        tile;
+      // eslint-disable-next-line no-restricted-syntax
+      for (i in this._tiles) {
+        if (this._tiles[i].coords.z !== this._tileZoom) {
+          log.debug('modifyLeafletHeaders _abortLoading - z coord !== tileZoom', {
+            tileZoom: this._tileZoom,
+            this: this,
+            L,
+          });
+          tile = this._tiles[i].el;
+
+          tile.onload = L.Util.falseFn;
+          tile.onerror = L.Util.falseFn;
+
+          if (!tile.complete) {
+            tile.src = L.Util.emptyImageUrl;
+            log.debug('modifyLeafletHeaders _abortLoading - removed tile', { tile, this: this, L });
+            L.DomUtil.remove(tile);
+            delete this._tiles[i];
+          }
+        }
+      }
+    },
+    _tileOnLoad(done, tile) {
+      log.debug('modifyLeafletHeaders _tileOnLoad', {
+        tile, done, this: this, L,
+      });
+      // For https://github.com/Leaflet/Leaflet/issues/3332
+      if (L.Browser.ielt9) {
+        setTimeout(L.Util.bind(done, this, null, tile), 0);
+      } else {
+        done(null, tile);
+      }
+    },
+    _getZoomForUrl() {
+      let zoom = this._tileZoom;
+      const { maxZoom } = this.options;
+      const { zoomReverse } = this.options;
+      const { zoomOffset } = this.options;
+
+      if (zoomReverse) {
+        zoom = maxZoom - zoom;
+      }
+      const finalZoom = zoom + zoomOffset;
+      return finalZoom;
+    },
+    _tileReady(coords, err, tile) {
+      log.debug('modifyLeafletHeaders _tileReady', {
+        tile, coords, err, this: this, L,
+      });
+      if (
+        !this._map
+        || (tile && tile.getAttribute('src') === L.Util.emptyImageUrl)
+      ) {
+        log.debug('modifyLeafletHeaders _tileReady - no src or map', {
+          tile,
+          coords,
+          err,
+          this: this,
+          L,
+          src: tile.getAttribute('src'),
+          emptyImageUrl: L.Util.emptyImageUrl,
+        });
+        return null;
+      }
+      log.debug('modifyLeafletHeaders _tileReady - src found', {
+        tile,
+        coords,
+        err,
+        this: this,
+        L,
+        src: tile.getAttribute('src'),
+        emptyImageUrl: L.Util.emptyImageUrl,
+      });
+      return L.GridLayer.prototype._tileReady.call(this, coords, err, tile);
+    },
+    getTileUrl(coords) {
+      const { getParamString } = L.Util;
+
+      const tileBounds = this._tileCoordsToNwSe(coords);
+      const crs = this._crs;
+      const bounds = new L.Bounds(crs.project(tileBounds[0]), crs.project(tileBounds[1]));
+      const { min } = bounds;
+      const { max } = bounds;
+      const bbox = (this._wmsVersion >= 1.3 && this._crs === L.CRS.EPSG4326
+        ? [min.y, min.x, max.y, max.x]
+        : [min.x, min.y, max.x, max.y]).join(',');
+      const url = L.TileLayer.prototype.getTileUrl.call(this, coords);
+      const tileUrl = url
+        + getParamString(this.wmsParams, url, this.options.uppercase)
+        + (this.options.uppercase ? '&BBOX=' : '&bbox=') + bbox;
+      log.debug('modifyLeafletHeaders getTileUrl', {
+        tileUrl, coords, this: this, L,
+      });
+      return tileUrl;
+    },
+    createTile(coords, done) {
+      const url = this.getTileUrl(coords);
+      log.debug('modifyLeafletHeaders createTile', url);
+      const img = document.createElement('img');
+      axios(
+        {
+          method: 'get',
+          url,
+          responseType: 'blob',
+          headers: {
+            /* 'Authorization': `Bearer ${jwt}`, */
+            /* 'Referer': 'https://energyapps.ch' */
+          },
+        },
+      )
+        .then((response) => {
+          log.debug('modifyLeafletHeaders response', response);
+          img.src = URL.createObjectURL(response.data);
+          done(null, img);
+        })
+        .catch((e) => {
+          log.error('modifyLeafletHeaders error', e);
+          // img.src = URL.createObjectURL(response.data);
+          done(null, img);
+        });
+      return img;
+    },
+  });
+  L.tileLayer.wms_headers = (url, options) => new L.TileLayer.WMS_Headers(url, { ...options });
+};
+
 function SimpleCard(props) {
   const fnName = 'SimpleCard';
   const classes = useStyles();
@@ -622,7 +807,7 @@ export default function Marketsense(props) {
     return allDocs;
   };
 
-  const drawHeatmap = async function (myMap, options) {
+  const drawHeatmap = async function drawHeatmap(myMap, options) {
     setIsLoadingOverview(true);
     const docs = await getPotentialsFromCloudant(filter.filterViewId, filter.filterCountViewId);
     log.debug(`${fnName} - drawHeatmap - docs`, { docs });
@@ -691,187 +876,6 @@ export default function Marketsense(props) {
     }
   }
   const setLayer = (myMap) => {
-    const modifyLeafletHeaders = () => {
-      // https://github.com/Esri/esri-leaflet/issues/743
-      L.TileLayer.WMS_Headers = L.TileLayer.WMS.extend({
-        setUrl(url, noRedraw) {
-          if (this._url === url && noRedraw === undefined) {
-            noRedraw = true;
-          }
-
-          this._url = url;
-
-          if (!noRedraw) {
-            this.redraw();
-          }
-          return this;
-        },
-        _removeTile(key) {
-          log.debug('modifyLeafletHeaders _removeTile', { key, this: this, L });
-          const tile = this._tiles[key];
-          if (!tile) {
-            log.debug('modifyLeafletHeaders _removeTile - no tile', {
-              key, tile, this: this, L,
-            });
-            return;
-          }
-          // Cancels any pending http requests associated with the tile
-          // unless we're on Android's stock browser,
-          // see https://github.com/Leaflet/Leaflet/issues/137
-          if (!L.Browser.androidStock) {
-            log.debug('modifyLeafletHeaders _removeTile - android', {
-              key, tile, this: this, L,
-            });
-            tile.el.setAttribute('src', L.Util.emptyImageUrl);
-          }
-          return L.GridLayer.prototype._removeTile.call(this, key);
-        },
-        _tileOnError(done, tile, e) {
-          log.debug('modifyLeafletHeaders _tileOnError', {
-            done, tile, e, this: this, L,
-          });
-          const errorUrl = this.options.errorTileUrl;
-          if (errorUrl && tile.getAttribute('src') !== errorUrl) {
-            tile.src = errorUrl;
-          }
-          done(e, tile);
-        },
-        _abortLoading() {
-          log.debug('modifyLeafletHeaders _abortLoading', { this: this, L });
-          const mapZoom = this._map._zoom;
-          if (
-            mapZoom >= 18
-          ) {
-            log.debug('modifyLeafletHeaders _abortLoading - zoom', { mapZoom, this: this, L });
-          }
-
-          let i;
-          let
-            tile;
-          for (i in this._tiles) {
-            if (this._tiles[i].coords.z !== this._tileZoom) {
-              log.debug('modifyLeafletHeaders _abortLoading - z coord !== tileZoom', {
-                tileZoom: this._tileZoom,
-                this: this,
-                L,
-              });
-              tile = this._tiles[i].el;
-
-              tile.onload = L.Util.falseFn;
-              tile.onerror = L.Util.falseFn;
-
-              if (!tile.complete) {
-                tile.src = L.Util.emptyImageUrl;
-                log.debug('modifyLeafletHeaders _abortLoading - removed tile', { tile, this: this, L });
-                L.DomUtil.remove(tile);
-                delete this._tiles[i];
-              }
-            }
-          }
-        },
-        _tileOnLoad(done, tile) {
-          log.debug('modifyLeafletHeaders _tileOnLoad', {
-            tile, done, this: this, L,
-          });
-          // For https://github.com/Leaflet/Leaflet/issues/3332
-          if (L.Browser.ielt9) {
-            setTimeout(L.Util.bind(done, this, null, tile), 0);
-          } else {
-            done(null, tile);
-          }
-        },
-        _getZoomForUrl() {
-          let zoom = this._tileZoom;
-          const { maxZoom } = this.options;
-          const { zoomReverse } = this.options;
-          const { zoomOffset } = this.options;
-
-          if (zoomReverse) {
-            zoom = maxZoom - zoom;
-          }
-          const finalZoom = zoom + zoomOffset;
-          return finalZoom;
-        },
-        _tileReady(coords, err, tile) {
-          log.debug('modifyLeafletHeaders _tileReady', {
-            tile, coords, err, this: this, L,
-          });
-          if (
-            !this._map
-            || (tile && tile.getAttribute('src') === L.Util.emptyImageUrl)
-          ) {
-            log.debug('modifyLeafletHeaders _tileReady - no src or map', {
-              tile,
-              coords,
-              err,
-              this: this,
-              L,
-              src: tile.getAttribute('src'),
-              emptyImageUrl: L.Util.emptyImageUrl,
-            });
-          } else {
-            log.debug('modifyLeafletHeaders _tileReady - src found', {
-              tile,
-              coords,
-              err,
-              this: this,
-              L,
-              src: tile.getAttribute('src'),
-              emptyImageUrl: L.Util.emptyImageUrl,
-            });
-            return L.GridLayer.prototype._tileReady.call(this, coords, err, tile);
-          }
-        },
-        getTileUrl(coords) {
-          const { getParamString } = L.Util;
-
-          const tileBounds = this._tileCoordsToNwSe(coords);
-          const crs = this._crs;
-          const bounds = new L.Bounds(crs.project(tileBounds[0]), crs.project(tileBounds[1]));
-          const { min } = bounds;
-          const { max } = bounds;
-          const bbox = (this._wmsVersion >= 1.3 && this._crs === L.CRS.EPSG4326
-            ? [min.y, min.x, max.y, max.x]
-            : [min.x, min.y, max.x, max.y]).join(',');
-          const url = L.TileLayer.prototype.getTileUrl.call(this, coords);
-          const tileUrl = url
-            + getParamString(this.wmsParams, url, this.options.uppercase)
-            + (this.options.uppercase ? '&BBOX=' : '&bbox=') + bbox;
-          log.debug('modifyLeafletHeaders getTileUrl', {
-            tileUrl, coords, this: this, L,
-          });
-          return tileUrl;
-        },
-        createTile(coords, done) {
-          const url = this.getTileUrl(coords);
-          log.debug('modifyLeafletHeaders createTile', url);
-          const img = document.createElement('img');
-          axios(
-            {
-              method: 'get',
-              url,
-              responseType: 'blob',
-              headers: {
-                /* 'Authorization': `Bearer ${jwt}`, */
-                /* 'Referer': 'https://energyapps.ch' */
-              },
-            },
-          )
-            .then((response) => {
-              log.debug('modifyLeafletHeaders response', response);
-              img.src = URL.createObjectURL(response.data);
-              done(null, img);
-            })
-            .catch((e) => {
-              hycon.error('modifyLeafletHeaders error', e);
-              // img.src = URL.createObjectURL(response.data);
-              done(null, img);
-            });
-          return img;
-        },
-      });
-      L.tileLayer.wms_headers = (url, options) => new L.TileLayer.WMS_Headers(url, { ...options });
-    };
     const getLeafletLayerUrls = () => {
       const baseWMTS = 'https://map-proxy.exoscale.swissenergyplanning.ch/wmts-proxy';
       const baseWMS = 'https://map-proxy.exoscale.swissenergyplanning.ch/wms-proxy';
@@ -1019,7 +1023,9 @@ export default function Marketsense(props) {
 
     let baseLayersGroup = null;
     if (props.parsedUrl.mapLayer === 'MAP_OSM') {
-      const osmLayer = L.tileLayer(baseLayers.MAP_OSM.layers.MAP_OSM.url, baseLayers.MAP_OSM.layers.MAP_OSM.options);
+      const osmLayer = L.tileLayer(
+        baseLayers.MAP_OSM.layers.MAP_OSM.url, baseLayers.MAP_OSM.layers.MAP_OSM.options,
+      );
       const layerGroup = L.layerGroup([osmLayer]);
       baseLayersGroup = layerGroup;
     } else {
@@ -1070,7 +1076,6 @@ export default function Marketsense(props) {
         log.debug(`${fnName} displayParcelGeometry`, { addressData });
         const parcelFeatureCollection = addressData.filter(
           (data) => {
-            // `${props.env.APIGatewayBase}/api/addresspoints/29395280/featurecollection-addresspoints-parcel`
             const replace = `${props.env.APIGatewayBase}/api/addresspoints/[0-9]+/featurecollection-addresspoints-parcel`;
             const regex = new RegExp(replace, 'g');
             const matches = !!data.config.url.match(regex);
@@ -1098,7 +1103,6 @@ export default function Marketsense(props) {
         log.debug(`${fnName} displayBuildingRoofsGeometry`, { addressData });
         const buildingRoofsFeatureCollection = addressData.filter(
           (data) => {
-            // `${props.env.APIGatewayBase}/api/addresspoints/29395280/featurecollection-roofs-parcelbuilding-addresspoints-parcel`
             const replace = `${props.env.APIGatewayBase}/api/addresspoints/[0-9]+/featurecollection-roofs-parcelbuilding[.]*`;
             const regex = new RegExp(replace, 'g');
             const matches = !!data.config.url.match(regex);
@@ -1115,6 +1119,9 @@ export default function Marketsense(props) {
                 };
               } catch (e) {
                 log.debug(`${fnName} cannot set the roof color based on the roof class`, { addressData, buildingRoofsFeatureCollection });
+                return {
+                  color: '#ff0000',
+                };
               }
             },
           });
@@ -1137,7 +1144,6 @@ export default function Marketsense(props) {
         log.debug(`${fnName} displayParcelRoofsGeometry`, { addressData });
         const parcelRoofsFeatureCollection = addressData.filter(
           (data) => {
-            // `${props.env.APIGatewayBase}/api/addresspoints/29395280/featurecollection-roofs-parcelbuilding-addresspoints-parcel`
             const replace = `${props.env.APIGatewayBase}/api/addresspoints/[0-9]+/featurecollection-roofs-parcelbuilding[.]*`;
             const regex = new RegExp(replace, 'g');
             const matches = !!data.config.url.match(regex);
@@ -1153,7 +1159,10 @@ export default function Marketsense(props) {
                   color: roofColors[feature.properties.klasse - 1],
                 };
               } catch (e) {
-                log.debug(`${fnName} cannot set the roof color based on the roof class`, { addressData, buildingRoofsFeatureCollection });
+                log.debug(`${fnName} cannot set the roof color based on the roof class`, { addressData, parcelRoofsFeatureCollection });
+                return {
+                  color: '#ff0000',
+                };
               }
             },
           });
@@ -1200,7 +1209,7 @@ export default function Marketsense(props) {
         const address = addressResponse.data[0];
         return address;
       };
-      const setMap = async (address) => {
+      const setInitialMapView = (address) => {
         log.debug(`${fnName} - onSepEvent - search address changed - address`, { address });
         const defaultPosition = [address.lat, address.long];
         const defaultZoom = 21;
@@ -1213,8 +1222,8 @@ export default function Marketsense(props) {
           displayParcelGeometry(addressData);
           displayBuildingRoofsGeometry(addressData);
           // displayParcelRoofsGeometry(addressData);
+          // TODO make it dynamic from the config
           displayMarker(address);
-          // let addresses = getNearAddresses(event.detail.objectAddress.lat, event.detail.objectAddress.long)
         };
         const dispatchGlobalEvent = (data) => {
           const myEvent = new CustomEvent(props.parsedUrl.sepEventName, {
@@ -1233,7 +1242,7 @@ export default function Marketsense(props) {
           log.debug(`${fnName} - onSepEvent - search address changed`, event);
           const address = await getAddressById(event.detail.payload.row.fields.id);
           const addressData = await getPublicSEPData(props, address.id);
-          setMap(address);
+          setInitialMapView(address);
           draw(address, addressData);
           dispatchGlobalEvent({ address, addressData });
         }
@@ -1246,7 +1255,7 @@ export default function Marketsense(props) {
           const address = await getAddressById(event.detail.payload.address.id);
           const addressData = await getPublicSEPData(props, address.id);
           // do not set the map position and zoom if the user interacts with the map
-          // setMap(address);
+          // setInitialMapView(address);
           draw(address, addressData);
           dispatchGlobalEvent({ address, addressData });
         }
@@ -1256,6 +1265,7 @@ export default function Marketsense(props) {
         window.removeEventListener(props.parsedUrl.sepEventName, onSepEvent);
       };
     }
+    return () => {};
   }, [map]);
 
   useEffect(() => {
@@ -1281,8 +1291,8 @@ export default function Marketsense(props) {
       });
 
       // set the uuid for an unique leaflet container id
-      const uuid = uuidv4();
-      setUuid(uuid);
+      const myUuid = uuidv4();
+      setUuid(myUuid);
 
       try {
         const overview = JSON.parse(props.parsedUrl.overview);
@@ -1299,6 +1309,7 @@ export default function Marketsense(props) {
         window.removeEventListener(props.parsedUrl.sepEventName, onSepEvent);
       };
     }
+    return () => {};
   }, [props.parsedUrl]);
 
   useEffect(() => {
