@@ -1259,7 +1259,7 @@ export default function Marketsense(props) {
         const address = addressResponse.data[0];
         return address;
       };
-      const setInitialMapView = (address) => {
+      const setMapView = (address) => {
         log.debug(`${fnName} - onSepEvent - search address changed - address`, { address });
         const defaultPosition = [address.lat, address.long];
         const defaultZoom = 21;
@@ -1268,12 +1268,20 @@ export default function Marketsense(props) {
 
       const onSepEvent = async (event) => {
         log.debug(`${fnName} - onSepEvent`, event);
+        const drawConfig = JSON.parse(props.parsedUrl.drawConfig);
         const draw = (address, addressData) => {
-          displayParcelGeometry(addressData);
-          displayBuildingRoofsGeometry(addressData);
-          // displayParcelRoofsGeometry(addressData);
-          // TODO make it dynamic from the config
-          displayMarker(address);
+          if (drawConfig.displayParcelGeometry) {
+            displayParcelGeometry(addressData);
+          }
+          if (drawConfig.displayBuildingRoofsGeometry) {
+            displayBuildingRoofsGeometry(addressData);
+          }
+          if (drawConfig.displayParcelRoofsGeometry) {
+            displayParcelRoofsGeometry(addressData);
+          }
+          if (drawConfig.displayMarker) {
+            displayMarker(address);
+          }
         };
         const dispatchGlobalEvent = (data) => {
           const myEvent = new CustomEvent(props.parsedUrl.sepEventName, {
@@ -1292,7 +1300,7 @@ export default function Marketsense(props) {
           log.debug(`${fnName} - onSepEvent - search address changed`, event);
           const address = await getAddressById(event.detail.payload.row.fields.id);
           const addressData = await getPublicSEPData(props, address.id);
-          setInitialMapView(address);
+          setMapView(address);
           draw(address, addressData);
           dispatchGlobalEvent({ address, addressData });
         }
@@ -1305,7 +1313,7 @@ export default function Marketsense(props) {
           const { address } = event.detail.payload;
           const { addressData } = event.detail.payload;
           // do not set the map position and zoom if the user interacts with the map
-          // setInitialMapView(address);
+          // setMapView(address);
           draw(address, addressData);
           dispatchGlobalEvent({ address, addressData });
         }

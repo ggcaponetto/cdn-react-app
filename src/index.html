@@ -78,6 +78,12 @@
         enabled: true
       }
     ]))
+    let drawConfig = encodeURIComponent(JSON.stringify({
+      displayParcelGeometry: true,
+      displayBuildingRoofsGeometry: true,
+      displayParcelRoofsGeometry: false,
+      displayMarker: true
+    }));
 
     // to disable the overview
     // let overview = null;
@@ -141,6 +147,7 @@
       + '&controls=' + controls
       + '&allowedEndpoints=' + allowedEndpoints
       + '&components=' + components
+      + '&drawConfig=' + drawConfig
 
     mainScript.addEventListener('load', function () {
       // the react app has rendered once

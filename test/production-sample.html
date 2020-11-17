@@ -78,6 +78,12 @@
         enabled: true
       }
     ]))
+    let roofDisplay = encodeURIComponent(JSON.stringify({
+      displayParcelGeometry: true,
+      displayBuildingRoofsGeometry: true,
+      displayParcelRoofsGeometry: true,
+      displayMarker: true
+    }));
 
     // to disable the overview
     // let overview = null;
@@ -141,6 +147,7 @@
       + '&controls=' + controls
       + '&allowedEndpoints=' + allowedEndpoints
       + '&components=' + components
+      + '&roofDisplay=' + roofDisplay
 
     mainScript.addEventListener('load', function () {
       // the react app has rendered once
