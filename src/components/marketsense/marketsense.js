@@ -25,6 +25,7 @@ import log from 'loglevel';
 
 import iconShadow from 'leaflet/dist/images/marker-shadow.png';
 import leafletIcon from 'leaflet/dist/images/marker-icon.png';
+import packageJson from '../../../package.json';
 
 const DefaultIcon = L.icon({
   iconUrl: leafletIcon,
@@ -1091,6 +1092,7 @@ export default function Marketsense(props) {
         by
         {' '}
         <a href="https://geoimpact.ch" target="_blank" rel="noreferrer">geoimpact</a>
+        {` | v${packageJson.version}`}
       </div>
     );
     myMap.attributionControl.setPrefix(null);
