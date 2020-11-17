@@ -43,31 +43,64 @@ const setupLogs = () => {
   }
 };
 
-const getNearAddresses = async (props, lat, lng) => axios({
-  method: 'get',
-  url: `${props.env.APIGatewayBase}/api/addresspoints-nearest-by-coordinates?x=${lng}&y=${lat}&srid=4326`,
-  headers: {
-    'Content-Type': 'application/json',
-    Accept: 'application/json',
-    Authorization: `Bearer ${props.parsedUrl.token}`,
-  },
-});
-const getAddress = async (props, addressId) => axios({
-  method: 'get',
-  url: `${props.env.APIGatewayBase}/api/marketsense/addresspoint-by-addressid/${addressId}`,
-  headers: {
-    'Content-Type': 'application/json',
-    Accept: 'application/json',
-    Authorization: `Bearer ${props.parsedUrl.token}`,
-  },
-});
+const isAllowedEndpoint = (props, endpoint) => {
+  const allowedEndpointsRegexArray = JSON.parse(props.parsedUrl.allowedEndpoints)
+    .map((regexString) => {
+      const regex = new RegExp(regexString, 'g');
+      return regex;
+    });
+  let isAllowed = false;
+  allowedEndpointsRegexArray.forEach((allowedEndpointRegex) => {
+    const matches = !!endpoint.match(allowedEndpointRegex);
+    // log.debug(`isAllowed - filtering ${endpoint}`, { matches, endpoint, allowedEndpointRegex });
+    // eslint-disable-next-line no-empty
+    if (matches) {
+      isAllowed = true;
+    }
+  });
+  return isAllowed;
+};
+const getNearAddresses = async (props, lat, lng) => {
+  const endpoint = `${props.env.APIGatewayBase}/api/addresspoints-nearest-by-coordinates?x=${lng}&y=${lat}&srid=4326`;
+  if (!isAllowedEndpoint(props, endpoint)) {
+    throw new Error(`the endpoint has to be enabled config and authorized: ${endpoint}`);
+  }
+  return axios({
+    method: 'get',
+    url: endpoint,
+    headers: {
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+      Authorization: `Bearer ${props.parsedUrl.token}`,
+    },
+  });
+};
+const getAddress = async (props, addressId) => {
+  const endpoint = `${props.env.APIGatewayBase}/api/marketsense/addresspoint-by-addressid/${addressId}`;
+  if (!isAllowedEndpoint(props, endpoint)) {
+    throw new Error(`the endpoint has to be enabled config and authorized: ${endpoint}`);
+  }
+  return axios({
+    method: 'get',
+    url: endpoint,
+    headers: {
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+      Authorization: `Bearer ${props.parsedUrl.token}`,
+    },
+  });
+};
 const getAddresses = async (props, searchString) => {
   const bodyFormData = new FormData();
   bodyFormData.set('searchtext', searchString);
+  const endpoint = `${props.env.APIGatewayBase}/api/searchaddress`;
+  if (!isAllowedEndpoint(props, endpoint)) {
+    throw new Error(`the endpoint has to be enabled config and authorized: ${endpoint}`);
+  }
   const response = await axios(
     {
       method: 'post',
-      url: `${props.env.APIGatewayBase}/api/searchaddress`,
+      url: endpoint,
       data: bodyFormData,
       headers: {
         'Content-Type': 'multipart/form-data',
@@ -97,15 +130,17 @@ const getPublicSEPData = async (props, addressId) => {
     `${props.env.APIGatewayBase}/api/addresspoints/${addressId}/featurecollection-roofs-parcelbuilding?minflaeche=10`,
     `${props.env.APIGatewayBase}/api/addresspoints/${addressId}/featurecollection-roofs-allparcelbuildings?minflaeche=10`,
   ];
-  const requests = endpoints.map((endopoint) => axios({
-    method: 'get',
-    url: endopoint,
-    headers: {
-      'Content-Type': 'application/json',
-      Accept: 'application/json',
-      Authorization: `Bearer ${props.parsedUrl.token}`,
-    },
-  }));
+  const requests = endpoints
+    .filter((endpoint) => isAllowedEndpoint(props, endpoint))
+    .map((endopoint) => axios({
+      method: 'get',
+      url: endopoint,
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+        Authorization: `Bearer ${props.parsedUrl.token}`,
+      },
+    }));
   const settledPromises = await Promise.allSettled(requests);
   return settledPromises.filter((response) => response.status === 'fulfilled').map((response) => response.value);
 };
@@ -854,8 +889,8 @@ export default function Marketsense(props) {
   async function onLeafletZoomEnd(e) {
     log.debug(`${fnName} onLeafletZoomEnd`, { e, props });
     try {
-      if (props.parsedUrl.overview) {
-        const overview = JSON.parse(props.parsedUrl.overview);
+      const overview = getOverviewConfig();
+      if (overview) {
         if (overview.options && overview.options.maxZoom) {
           const { maxZoom } = overview.options;
           const currentZoom = e.target.getZoom();
@@ -872,7 +907,7 @@ export default function Marketsense(props) {
         }
       }
     } catch (error) {
-      log.warn(`${fnName} onLeafletZoomEnd - overview autohide is not configured`, error);
+      log.debug(`${fnName} onLeafletZoomEnd - overview autohide is not configured`, error);
     }
   }
   const setLayer = (myMap) => {
@@ -1042,12 +1077,16 @@ export default function Marketsense(props) {
     myMap.on('click', onLeafletMapClick);
     myMap.on('zoomend', onLeafletZoomEnd);
     setLayer(myMap);
-    const attribution = (
+    const sepAttribution = (
       <div css={{
         fontSize: '1.5em',
       }}
       >
-        <a href="https://swissenergyplanning.ch" target="_blank" rel="noreferrer">SEP &copy;</a>
+        Map layers by
+        {' '}
+        <a href="https://www.swisstopo.admin.ch" target="_blank" rel="noreferrer">swisstopo</a>
+        {' | '}
+        <a href="https://swissenergyplanning.ch" target="_blank" rel="noreferrer">&copy;SEP</a>
         {' '}
         by
         {' '}
@@ -1056,8 +1095,17 @@ export default function Marketsense(props) {
     );
     myMap.attributionControl.setPrefix(null);
     myMap.attributionControl.setPosition('bottomleft');
-    myMap.attributionControl.addAttribution(ReactDOMServer.renderToStaticMarkup(attribution));
+    myMap.attributionControl
+      .addAttribution(ReactDOMServer.renderToStaticMarkup(sepAttribution));
     return myMap;
+  };
+  const getOverviewConfig = () => {
+    try {
+      return JSON.parse(props.parsedUrl.overview);
+    } catch (e) {
+      log.debug(`${fnName} - getOverviewConfig - no overview config found`);
+      return null;
+    }
   };
 
   useEffect(() => {
@@ -1144,7 +1192,7 @@ export default function Marketsense(props) {
         log.debug(`${fnName} displayParcelRoofsGeometry`, { addressData });
         const parcelRoofsFeatureCollection = addressData.filter(
           (data) => {
-            const replace = `${props.env.APIGatewayBase}/api/addresspoints/[0-9]+/featurecollection-roofs-parcelbuilding[.]*`;
+            const replace = `${props.env.APIGatewayBase}/api/addresspoints/[0-9]+/featurecollection-roofs-allparcelbuildings[.]*`;
             const regex = new RegExp(replace, 'g');
             const matches = !!data.config.url.match(regex);
             return matches;
@@ -1252,8 +1300,8 @@ export default function Marketsense(props) {
           && event.detail.payload
         ) {
           log.debug(`${fnName} - onSepEvent - map click`, event);
-          const address = await getAddressById(event.detail.payload.address.id);
-          const addressData = await getPublicSEPData(props, address.id);
+          const { address } = event.detail.payload;
+          const { addressData } = event.detail.payload;
           // do not set the map position and zoom if the user interacts with the map
           // setInitialMapView(address);
           draw(address, addressData);
@@ -1294,13 +1342,11 @@ export default function Marketsense(props) {
       const myUuid = uuidv4();
       setUuid(myUuid);
 
-      try {
-        const overview = JSON.parse(props.parsedUrl.overview);
+      const overview = getOverviewConfig();
+      if (overview) {
         const { filterCountViewId } = overview;
         const { filterViewId } = overview;
         setFilter({ filterViewId, filterCountViewId });
-      } catch (e) {
-        log.debug('no overview settings have been found or could be parsed', e);
       }
 
       window.dispatchEvent(myEvent);
@@ -1319,18 +1365,21 @@ export default function Marketsense(props) {
     if (uuid && container) {
       const myMap = initLeaflet(uuid);
       // draw the heatmap
-      drawHeatmap(
-        myMap,
-        {
-          radius: 25,
-          gradient: {
-            '0.80': props.theme.palette.secondary.light,
-            '0.90': props.theme.palette.secondary.main,
-            0.95: props.theme.palette.primary.light,
-            '1.0': props.theme.palette.primary.main,
+      const overview = getOverviewConfig();
+      if (overview) {
+        drawHeatmap(
+          myMap,
+          {
+            radius: 25,
+            gradient: {
+              '0.80': props.theme.palette.secondary.light,
+              '0.90': props.theme.palette.secondary.main,
+              0.95: props.theme.palette.primary.light,
+              '1.0': props.theme.palette.primary.main,
+            },
           },
-        },
-      );
+        );
+      }
       setMap(myMap);
     }
   }, [uuid, container]);
@@ -1340,25 +1389,30 @@ export default function Marketsense(props) {
       process, props, uuid, container,
     });
     if (filter && map) {
-      drawHeatmap(
-        map,
-        {
-          radius: 25,
-          gradient: {
-            '0.80': props.theme.palette.secondary.light,
-            '0.90': props.theme.palette.secondary.main,
-            0.95: props.theme.palette.primary.light,
-            '1.0': props.theme.palette.primary.main,
+      const overview = getOverviewConfig();
+      if (overview) {
+        drawHeatmap(
+          map,
+          {
+            radius: 25,
+            gradient: {
+              '0.80': props.theme.palette.secondary.light,
+              '0.90': props.theme.palette.secondary.main,
+              0.95: props.theme.palette.primary.light,
+              '1.0': props.theme.palette.primary.main,
+            },
           },
-        },
-      );
+        );
+      }
     }
   }, [filter]);
 
-  const renderMapPortal = () => {
+  const renderMapPortal = (key) => {
     if (container) {
       return ReactDOM.createPortal((
-        <React.Fragment>
+        <React.Fragment
+          key={key}
+        >
           {isLoadingOverview ? <LinearProgress /> : null}
           <div
             id={`leaflet-${uuid}`}
@@ -1373,17 +1427,36 @@ export default function Marketsense(props) {
     }
     return null;
   };
+  const getEnabledComponents = () => {
+    const enabledComponents = JSON.parse(props.parsedUrl.components)
+      .filter((component) => component.enabled)
+      .map((component, index) => {
+        if (component.name === 'sep-map') {
+          return renderMapPortal(index);
+        } if (component.name === 'sep-address') {
+          return (
+            <AddressSearch
+              key={index}
+              {...props}
+              setFilter={setFilter}
+            />
+          );
+        } if (component.name === 'sep-object-display') {
+          return (
+            <ObjectDisplay
+              key={index}
+              {...props}
+              isLoadingAddressData={isLoadingAddressData}
+            />
+          );
+        }
+        return null;
+      });
+    return enabledComponents;
+  };
   return (
     <React.Fragment>
-      {renderMapPortal()}
-      <AddressSearch
-        {...props}
-        setFilter={setFilter}
-      />
-      <ObjectDisplay
-        {...props}
-        isLoadingAddressData={isLoadingAddressData}
-      />
+      {getEnabledComponents()}
     </React.Fragment>
   );
 }
