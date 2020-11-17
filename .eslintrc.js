@@ -2,6 +2,7 @@ module.exports = {
   env: {
     browser: true,
     es6: true,
+    'cypress/globals': true,
   },
   extends: 'airbnb',
   parser: 'babel-eslint',
@@ -18,6 +19,7 @@ module.exports = {
   },
   plugins: [
     'react',
+    'cypress',
   ],
   rules: {
     'react/jsx-filename-extension': [1, { extensions: ['.js', '.jsx'] }],
