@@ -555,7 +555,8 @@ function AddressSearch(props) {
 
 export default function Marketsense(props) {
   const fnName = 'Marketsense';
-  const { /* t, i18n */ } = useTranslation('open_marketsense', { useSuspense: true });
+  // eslint-disable-next-line
+  const {  t, i18n  } = useTranslation('open_marketsense', { useSuspense: true });
   const [uuid, setUuid] = useState(null);
   const [container, setContainer] = useState(null);
   const [map, setMap] = useState(null);
@@ -582,11 +583,11 @@ export default function Marketsense(props) {
     docsCount = await remoteDB.query(filterCountViewId, {}).then((result) => {
       // handle result
       log.debug(`${fnName} getPotentialsFromCloudant - result`, result);
-      let docsCount = 0;
+      let documentCount = 0;
       if (typeof result.rows[0] !== 'undefined') {
-        docsCount = result.rows[0].value;
+        documentCount = result.rows[0].value;
       }
-      return docsCount;
+      return documentCount;
     }).catch((e) => {
       log.warn(`${fnName} getPotentialsFromCloudant - result`, { e });
       return 0;
@@ -594,14 +595,13 @@ export default function Marketsense(props) {
     log.warn(`${fnName} getPotentialsFromCloudant - docsCount`, { docsCount });
 
     const chunkSize = 500 * 1000;
-    const results = [];
-
+    const promises = [];
     for (let i = 0; i < docsCount; i += chunkSize) {
       const percentage = (i / docsCount) * 100;
       log.debug(`${fnName} getPotentialsFromCloudant - progress ${percentage}`, {
         percentage,
       });
-      const result = await remoteDB.query(filterViewId, {
+      const result = remoteDB.query(filterViewId, {
         limit: chunkSize,
         skip: i,
       }).catch((e) => {
@@ -612,13 +612,12 @@ export default function Marketsense(props) {
         });
         throw e;
       });
-      results.push(result);
+      promises.push(result);
       log.debug(`${fnName} getPotentialsFromCloudant - results`, {
-        results,
         docsCount,
       });
     }
-
+    const results = await Promise.all(promises);
     const allDocs = results.reduce((acc, curr) => acc.concat(curr.rows), []);
     return allDocs;
   };
