@@ -78,12 +78,17 @@
         enabled: true
       }
     ]))
-    let roofDisplay = encodeURIComponent(JSON.stringify({
+    let drawConfig = encodeURIComponent(JSON.stringify({
       displayParcelGeometry: true,
       displayBuildingRoofsGeometry: true,
-      displayParcelRoofsGeometry: true,
+      displayParcelRoofsGeometry: false,
       displayMarker: true
     }));
+    let initialMapBounds = encodeURIComponent(
+      JSON.stringify(
+        {"_southWest":{"lat":46.91544795636976,"lng":7.389850616455079},"_northEast":{"lat":46.97404484472402,"lng":7.555675506591798}}
+      )
+    )
 
     // to disable the overview
     // let overview = null;
@@ -147,7 +152,8 @@
       + '&controls=' + controls
       + '&allowedEndpoints=' + allowedEndpoints
       + '&components=' + components
-      + '&roofDisplay=' + roofDisplay
+      + '&drawConfig=' + drawConfig
+      + '&initialMapBounds=' +initialMapBounds
 
     mainScript.addEventListener('load', function () {
       // the react app has rendered once
