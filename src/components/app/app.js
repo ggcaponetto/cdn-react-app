@@ -2,14 +2,37 @@ import React, { useEffect, useState } from 'react';
 import ReactDOM from 'react-dom';
 import qs from 'qs';
 import { LinearProgress } from '@material-ui/core';
+// import { Marketsense } from '../marketsense/marketsense.js'
 import { createMuiTheme, ThemeProvider } from '@material-ui/core/styles';
-import AnotherSample from '../sample/another-sample'
 
 import { Helmet } from 'react-helmet';
 
+// import Marketsense from '../marketsense/marketsense'
+// const Hello = React.lazy(() => import( './../hello/hello'))
+
 import log from 'loglevel';
 
-const Sample = React.lazy(() => import(/* webpackChunkName: "sample" */ './../sample/sample.js'));
+import i18next from 'i18next';
+import Backend from 'i18next-locize-backend';
+import { initReactI18next, useTranslation } from 'react-i18next';
+
+// const Marketsense = React.lazy(() => import( './../marketsense/marketsense'))
+
+const Marketsense = React.lazy(() => import(/* webpackChunkName: "marketsense" */ './../marketsense/marketsense.js'));
+
+i18next
+  .use(Backend)
+  .use(initReactI18next) // passes i18n down to react-i18next
+  .init({
+    // ...other options
+    lng: 'de-CH',
+    fallbackLng: 'de-CH',
+    backend: {
+      projectId: 'c016a769-684b-42fe-a8c2-880bff481672',
+      apiKey: 'd325343e-8fb0-42f0-b5cb-fde2968a4a3f',
+      referenceLng: 'de-CH',
+    },
+  });
 
 log.setLevel('debug');
 
@@ -28,9 +51,10 @@ const getParsedUrl = () => {
 
 function App() {
   const fnName = 'App';
+  const { t, i18n } = useTranslation('main', { useSuspense: false });
   const [appProps, setAppProps] = useState({
     env: {
-      APIGatewayBase: 'https://services.swissenergyplanning.ch',
+      APIGatewayBase: 'https://staging.services.swissenergyplanning.ch',
     },
   });
 
@@ -52,28 +76,7 @@ function App() {
     log.debug(`${fnName} - getTheme - no override`, { defaultTheme, theme });
     return theme;
   };
-  const getComponent = () => {
-    if (appProps) {
-      const getLoadingComponent = () => (
-        <div>
-          <LinearProgress />
-        </div>
-      );
-      return (
-        <>
-          <React.Suspense fallback={getLoadingComponent()}>
-            <Sample appProps />
-            <AnotherSample />
-          </React.Suspense>
-        </>
-      );
-    }
-    return (
-      <>
-        <h3>loading...</h3>
-      </>
-    );
-  };
+
   const getTheme = (parsedUrl) => {
     const defaultTheme = {
       palette: {
@@ -104,12 +107,17 @@ function App() {
   useEffect(() => {
     const url = new URL(script.src);
     const parsedUrl = getParsedUrl();
-    log.debug(`${fnName} - constructor`, { url, parsedUrl, appProps });
-    setAppProps((myAppProps) => ({
-      ...myAppProps,
+    log.debug(`${fnName} - constructor`, {
+      url, parsedUrl, appProps, t, i18n,
+    });
+    setAppProps((prevAppProps) => ({
+      ...prevAppProps,
       parsedUrl,
       theme: getTheme(parsedUrl),
     }));
+    if (parsedUrl.lang) {
+      i18n.changeLanguage(parsedUrl.lang);
+    }
     const myEvent = new CustomEvent(parsedUrl.sepEventName, {
       detail: {
         action: 'loaded-app',
@@ -118,6 +126,28 @@ function App() {
     });
     window.dispatchEvent(myEvent);
   }, []);
+
+  const getComponent = () => {
+    if (appProps) {
+      const getLoadingComponent = () => (
+        <div>
+          <LinearProgress />
+        </div>
+      );
+      return (
+        <>
+          <React.Suspense fallback={getLoadingComponent()}>
+            <Marketsense {...appProps} />
+          </React.Suspense>
+        </>
+      );
+    }
+    return (
+      <>
+        <h3>loading...</h3>
+      </>
+    );
+  };
   return (
     <ThemeProvider theme={appProps.theme || getDefaultTheme()}>
       <Helmet>
@@ -132,10 +162,10 @@ function App() {
 
 if (module.hot) {
   module.hot.accept([
-    '../sample/sample',
-    '../sample/another-sample',
+    '../hello/hello',
+    '../marketsense/marketsense',
   ], () => {
-    log.trace('Accepting the updated sample.js module!');
+    log.trace('Accepting the updated hello.js module!');
     ReactDOM.render(
       <App />,
       document.getElementById('app'),
