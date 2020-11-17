@@ -1072,9 +1072,18 @@ export default function Marketsense(props) {
   const initLeaflet = (myUuid) => {
     log.debug(`${fnName} initLeaflet`, { props });
     const myMap = L.map(`leaflet-${myUuid}`, {});
-    const defaultPosition = [46.948484, 8.358491];
-    const defaultZoom = 8;
-    myMap.setView(defaultPosition, defaultZoom);
+    if (props.parsedUrl.initialMapBounds) {
+      try {
+        const initialMapBounds = JSON.parse(props.parsedUrl.initialMapBounds);
+        log.debug(`${fnName} initLeaflet - setting the initial map bounds`, { initialMapBounds });
+        myMap.fitBounds(L.latLngBounds(initialMapBounds._southWest, initialMapBounds._northEast));
+      } catch (e) {
+        log.debug(`${fnName} initLeaflet - could not set the default map bounds`, { e, props });
+        const defaultPosition = [46.948484, 8.358491];
+        const defaultZoom = 8;
+        myMap.setView(defaultPosition, defaultZoom);
+      }
+    }
     myMap.on('click', onLeafletMapClick);
     myMap.on('zoomend', onLeafletZoomEnd);
     setLayer(myMap);
@@ -1390,6 +1399,9 @@ export default function Marketsense(props) {
           },
         );
       }
+      log.debug(`${fnName} - useEffect - [uuid, container] - saving map reference`, {
+        myMap,
+      });
       setMap(myMap);
     }
   }, [uuid, container]);
